@@ -232,8 +232,7 @@
 
     .info-card,
     .gallery-card,
-    .contact-card,
-    .panel {
+    .contact-card {
       border: 1px solid var(--border);
       border-radius: 8px;
       background: var(--panel);
@@ -278,198 +277,22 @@
       line-height: 1.45;
     }
 
-    .app-section {
-      margin-top: 28px;
-      padding: 24px;
-      border: 1px solid var(--border);
+    .apps-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
       border-radius: 8px;
-      background: var(--soft-bg);
-    }
-
-    .app-header {
-      margin-bottom: 24px;
-    }
-
-    .app-header p {
-      max-width: 660px;
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.65;
-    }
-
-    .workspace {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
-      gap: 18px;
-      align-items: start;
-    }
-
-    .input-panel,
-    .result-panel {
-      padding: 22px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 10px;
-      font-weight: 800;
-      font-size: 1.05rem;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 300px;
-      resize: vertical;
-      padding: 16px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font: inherit;
-      line-height: 1.55;
-      background: #fbfdff;
-      outline: none;
-      transition: border-color 150ms ease, box-shadow 150ms ease;
-    }
-
-    textarea:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
-    }
-
-    .hint {
-      margin: 10px 0 18px;
-      color: var(--muted);
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    button {
-      min-height: 44px;
-      border: 0;
-      border-radius: 8px;
-      padding: 0 16px;
-      font: inherit;
-      font-weight: 800;
-      cursor: pointer;
-      transition: transform 120ms ease, background-color 120ms ease, color 120ms ease;
-    }
-
-    button:active {
-      transform: translateY(1px);
-    }
-
-    .primary {
-      background: var(--primary);
-      color: #ffffff;
-    }
-
-    .primary:hover {
-      background: var(--primary-dark);
-    }
-
-    .secondary {
+      padding: 0 18px;
       background: var(--primary-soft);
       color: var(--primary-dark);
+      font-weight: 800;
     }
 
-    .secondary:hover {
+    .apps-link:hover,
+    .apps-link:focus-visible {
       background: #d8e8ff;
-    }
-
-    .ghost {
-      background: transparent;
-      color: var(--danger);
-      border: 1px solid #efcaca;
-    }
-
-    .ghost:hover {
-      background: #fff1f1;
-    }
-
-    .result-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .result-header h3 {
-      margin: 0;
-    }
-
-    .count {
-      flex: 0 0 auto;
-      border-radius: 999px;
-      padding: 6px 10px;
-      background: var(--primary-soft);
-      color: var(--primary-dark);
-      font-size: 0.9rem;
-      font-weight: 800;
-    }
-
-    .message {
-      min-height: 24px;
-      margin: 0 0 14px;
-      color: var(--muted);
-      line-height: 1.5;
-    }
-
-    .message.error {
-      color: var(--danger);
-      font-weight: 800;
-    }
-
-    ol {
-      display: grid;
-      gap: 10px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    li {
-      display: grid;
-      grid-template-columns: 48px minmax(0, 1fr);
-      align-items: center;
-      min-height: 54px;
-      overflow-wrap: anywhere;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: #fbfdff;
-    }
-
-    .rank {
-      display: grid;
-      place-items: center;
-      height: 100%;
-      border-right: 1px solid var(--border);
-      color: var(--primary-dark);
-      font-weight: 800;
-    }
-
-    .name {
-      padding: 12px 14px;
-      font-weight: 700;
-    }
-
-    .empty-state {
-      display: grid;
-      place-items: center;
-      min-height: 230px;
-      padding: 20px;
-      border: 1px dashed var(--border);
-      border-radius: 8px;
-      color: var(--muted);
-      text-align: center;
-      line-height: 1.6;
-      background: #fbfdff;
+      outline: none;
     }
 
     .contact-card a {
@@ -520,13 +343,8 @@
       .about-grid,
       .interest-grid,
       .gallery-grid,
-      .contact-grid,
-      .workspace {
+      .contact-grid {
         grid-template-columns: 1fr;
-      }
-
-      textarea {
-        min-height: 240px;
       }
     }
 
@@ -562,22 +380,10 @@
         width: 100%;
       }
 
-      .app-section,
-      .input-panel,
-      .result-panel,
       .info-card,
       .gallery-caption,
       .contact-card {
         padding: 16px;
-      }
-
-      .actions {
-        display: grid;
-        grid-template-columns: 1fr;
-      }
-
-      button {
-        width: 100%;
       }
     }
   </style>
@@ -602,7 +408,7 @@
         <p class="eyebrow">교실에서 시작하는 배움</p>
         <h1 id="heroTitle">권쌤의 교실</h1>
         <p class="hero-text">교실의 기록을 나누고, 수업에서 바로 쓸 수 있는 웹앱을 만드는 공간입니다.</p>
-        <a class="hero-action" href="#apps">발표 순서 웹앱 보기</a>
+        <a class="hero-action" href="./apps/">교사용 웹앱 모음 보기</a>
       </div>
       <figure class="profile-card" aria-label="권쌤 프로필 사진">
         <img
@@ -661,38 +467,9 @@
     <section class="section-block" id="apps" aria-labelledby="appsTitle">
       <div class="section-heading">
         <h2 id="appsTitle">만든 웹앱</h2>
-        <p class="section-intro">수업 진행에 바로 활용할 수 있는 작은 도구를 만들고 있습니다.</p>
+        <p class="section-intro">교실에서 바로 사용할 수 있는 웹앱을 한곳에 모았습니다.</p>
       </div>
-
-      <div class="app-section">
-        <header class="app-header">
-          <h3>랜덤 발표 순서 정하기</h3>
-          <p>학생 이름을 입력하고 버튼을 누르면 발표 순서를 무작위로 정해줍니다.</p>
-        </header>
-
-        <div class="workspace" aria-label="발표 순서 생성기">
-          <div class="panel input-panel">
-            <label for="studentNames">학생 이름</label>
-            <textarea id="studentNames" aria-describedby="studentNamesHint" aria-invalid="false" placeholder="예:&#10;김민준&#10;이서연&#10;박지호&#10;최하은"></textarea>
-            <p class="hint" id="studentNamesHint">학생 이름은 한 줄에 한 명씩 또는 쉼표로 구분해 입력할 수 있습니다. 빈 줄은 자동으로 무시되며, 같은 이름을 여러 번 입력하면 각각 별도의 학생으로 처리됩니다.</p>
-            <div class="actions">
-              <button class="primary" id="shuffleButton" type="button">발표 순서 뽑기</button>
-              <button class="secondary" id="sampleButton" type="button">예시 입력</button>
-              <button class="ghost" id="clearButton" type="button">초기화</button>
-            </div>
-          </div>
-
-          <div class="panel result-panel">
-            <div class="result-header">
-              <h3 id="resultTitle">발표 순서</h3>
-              <span class="count" id="studentCount" aria-live="polite" aria-atomic="true">0명</span>
-            </div>
-            <p class="message" id="message" role="status" aria-live="polite" aria-atomic="true">이름을 입력한 뒤 발표 순서를 뽑아보세요.</p>
-            <p class="message error" id="errorMessage" role="alert" hidden></p>
-            <div id="resultArea" class="empty-state" role="region" aria-labelledby="resultTitle" tabindex="-1">아직 정해진 발표 순서가 없습니다.</div>
-          </div>
-        </div>
-      </div>
+      <a class="apps-link" href="./apps/">교사용 웹앱 모음 보기</a>
     </section>
 
     <section class="section-block" id="gallery" aria-labelledby="galleryTitle">
@@ -759,151 +536,5 @@
     © 2026 권쌤의 교실
   </footer>
 
-  <script>
-    const studentNames = document.querySelector("#studentNames");
-    const shuffleButton = document.querySelector("#shuffleButton");
-    const sampleButton = document.querySelector("#sampleButton");
-    const clearButton = document.querySelector("#clearButton");
-    const studentCount = document.querySelector("#studentCount");
-    const message = document.querySelector("#message");
-    const errorMessage = document.querySelector("#errorMessage");
-    const resultArea = document.querySelector("#resultArea");
-
-    const sampleNames = [
-      "김민준",
-      "이서연",
-      "박지호",
-      "최하은",
-      "정도윤",
-      "강지민",
-      "윤서아",
-      "한유준"
-    ];
-
-    function parseNames(value) {
-      return value
-        .split(/[\n,]+/)
-        .map((name) => name.trim())
-        .filter(Boolean);
-    }
-
-    function shuffle(items) {
-      const copied = [...items];
-
-      for (let index = copied.length - 1; index > 0; index -= 1) {
-        const randomIndex = Math.floor(Math.random() * (index + 1));
-        [copied[index], copied[randomIndex]] = [copied[randomIndex], copied[index]];
-      }
-
-      return copied;
-    }
-
-    function updateCount() {
-      const names = parseNames(studentNames.value);
-      studentCount.textContent = `${names.length}명`;
-    }
-
-    function findDuplicateNames(names) {
-      const counts = new Map();
-
-      names.forEach((name) => {
-        counts.set(name, (counts.get(name) || 0) + 1);
-      });
-
-      return [...counts.entries()].filter(([, count]) => count > 1);
-    }
-
-    function clearError() {
-      errorMessage.textContent = "";
-      errorMessage.hidden = true;
-      studentNames.setAttribute("aria-invalid", "false");
-    }
-
-    function showError(text) {
-      message.textContent = "";
-      errorMessage.textContent = text;
-      errorMessage.hidden = false;
-      studentNames.setAttribute("aria-invalid", "true");
-      renderEmpty("아직 정해진 발표 순서가 없습니다.");
-      studentNames.focus();
-    }
-
-    function renderEmpty(text) {
-      resultArea.className = "empty-state";
-      resultArea.textContent = text;
-    }
-
-    function renderOrder(names) {
-      const list = document.createElement("ol");
-
-      names.forEach((name, index) => {
-        const item = document.createElement("li");
-        const rank = document.createElement("span");
-        const nameText = document.createElement("span");
-
-        rank.className = "rank";
-        rank.textContent = `${index + 1}`;
-        nameText.className = "name";
-        nameText.textContent = name;
-
-        item.append(rank, nameText);
-        list.append(item);
-      });
-
-      resultArea.className = "";
-      resultArea.replaceChildren(list);
-    }
-
-    function drawPresentationOrder() {
-      const names = parseNames(studentNames.value);
-      updateCount();
-
-      if (names.length === 0) {
-        showError("학생 이름을 2명 이상 입력해 주세요.");
-        return;
-      }
-
-      if (names.length === 1) {
-        showError("발표 순서를 만들려면 학생 이름이 2명 이상 필요합니다.");
-        return;
-      }
-
-      const orderedNames = shuffle(names);
-      const duplicates = findDuplicateNames(names);
-      const duplicateNotice = duplicates.length > 0
-        ? ` 같은 이름이 포함되어 있습니다: ${duplicates.map(([name, count]) => `${name}(${count}명)`).join(", ")}. 각각 별도의 학생으로 처리했습니다.`
-        : "";
-
-      clearError();
-      message.textContent = `총 ${orderedNames.length}명의 발표 순서가 생성되었습니다.${duplicateNotice}`;
-      renderOrder(orderedNames);
-      resultArea.focus();
-    }
-
-    shuffleButton.addEventListener("click", drawPresentationOrder);
-
-    sampleButton.addEventListener("click", () => {
-      studentNames.value = sampleNames.join("\n");
-      updateCount();
-      clearError();
-      message.textContent = "예시 이름을 넣었습니다. 발표 순서를 뽑아보세요.";
-      renderEmpty("아직 정해진 발표 순서가 없습니다.");
-      studentNames.focus();
-    });
-
-    clearButton.addEventListener("click", () => {
-      studentNames.value = "";
-      updateCount();
-      clearError();
-      message.textContent = "이름을 입력한 뒤 발표 순서를 뽑아보세요.";
-      renderEmpty("아직 정해진 발표 순서가 없습니다.");
-      studentNames.focus();
-    });
-
-    studentNames.addEventListener("input", () => {
-      updateCount();
-      clearError();
-    });
-  </script>
 </body>
 </html>

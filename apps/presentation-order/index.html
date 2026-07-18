@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>발표 순서 정하기 | 권쌤의 교사용 웹앱</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #ffffff;
+      --soft-bg: #f4f8fc;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #64748b;
+      --border: #d9e4ef;
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --primary-soft: #eaf2ff;
+      --danger: #b44747;
+      --shadow: 0 16px 40px rgba(37, 99, 235, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    main { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 56px; }
+    a { color: inherit; text-decoration: none; }
+
+    .back-link {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      color: var(--primary-dark);
+      font-weight: 800;
+    }
+
+    .back-link:hover,
+    .back-link:focus-visible { text-decoration: underline; }
+
+    header { margin: 38px 0 28px; max-width: 700px; }
+
+    h1 {
+      margin: 0 0 12px;
+      color: var(--primary-dark);
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      line-height: 1.15;
+    }
+
+    .intro { margin: 0; color: var(--muted); line-height: 1.7; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    label { display: block; margin-bottom: 10px; font-size: 1.05rem; font-weight: 800; }
+
+    textarea {
+      width: 100%;
+      min-height: 300px;
+      resize: vertical;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font: inherit;
+      line-height: 1.55;
+      background: #fbfdff;
+      outline: none;
+    }
+
+    textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14); }
+    .hint { margin: 10px 0 18px; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 16px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .primary { background: var(--primary); color: #ffffff; }
+    .primary:hover { background: var(--primary-dark); }
+    .secondary { background: var(--primary-soft); color: var(--primary-dark); }
+    .secondary:hover { background: #d8e8ff; }
+    .ghost { border: 1px solid #efcaca; background: transparent; color: var(--danger); }
+    .ghost:hover { background: #fff1f1; }
+
+    .result-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    h2 { margin: 0; font-size: 1.16rem; line-height: 1.35; }
+    .panel > h2 { margin-bottom: 18px; }
+
+    .count {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .message { min-height: 24px; margin: 0 0 14px; color: var(--muted); line-height: 1.5; }
+    .message.error { color: var(--danger); font-weight: 800; }
+    ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    li {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      align-items: center;
+      min-height: 54px;
+      overflow-wrap: anywhere;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfdff;
+    }
+
+    .rank { display: grid; place-items: center; height: 100%; border-right: 1px solid var(--border); color: var(--primary-dark); font-weight: 800; }
+    .name { padding: 12px 14px; font-weight: 700; }
+    .empty-state { display: grid; place-items: center; min-height: 230px; padding: 20px; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); text-align: center; line-height: 1.6; background: #fbfdff; }
+
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+      textarea { min-height: 240px; }
+    }
+
+    @media (max-width: 540px) {
+      main { width: min(100% - 24px, 680px); padding-top: 20px; }
+      header { margin: 28px 0 24px; }
+      .panel { padding: 16px; }
+      .actions { display: grid; grid-template-columns: 1fr; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="back-link" href="../">← 웹앱 모음으로 돌아가기</a>
+    <header>
+      <h1>발표 순서 정하기</h1>
+      <p class="intro">학생 이름을 입력하면 무작위 발표 순서를 정할 수 있습니다.</p>
+    </header>
+
+    <div class="workspace" aria-label="발표 순서 생성기">
+      <section class="panel" aria-labelledby="inputTitle">
+        <h2 id="inputTitle">학생 이름 입력</h2>
+        <label for="studentNames">학생 이름</label>
+        <textarea id="studentNames" aria-describedby="studentNamesHint" aria-invalid="false" placeholder="예:&#10;김민준&#10;이서연&#10;박지호&#10;최하은"></textarea>
+        <p class="hint" id="studentNamesHint">학생 이름은 한 줄에 한 명씩 또는 쉼표로 구분해 입력할 수 있습니다. 빈 줄은 자동으로 무시되며, 같은 이름을 여러 번 입력하면 각각 별도의 학생으로 처리됩니다.</p>
+        <div class="actions">
+          <button class="primary" id="shuffleButton" type="button">발표 순서 뽑기</button>
+          <button class="secondary" id="sampleButton" type="button">예시 입력</button>
+          <button class="ghost" id="clearButton" type="button">초기화</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="resultTitle">
+        <div class="result-header">
+          <h2 id="resultTitle">발표 순서</h2>
+          <span class="count" id="studentCount" aria-live="polite" aria-atomic="true">0명</span>
+        </div>
+        <p class="message" id="message" role="status" aria-live="polite" aria-atomic="true">이름을 입력한 뒤 발표 순서를 뽑아보세요.</p>
+        <p class="message error" id="errorMessage" role="alert" hidden></p>
+        <div id="resultArea" class="empty-state" role="region" aria-labelledby="resultTitle" tabindex="-1">아직 정해진 발표 순서가 없습니다.</div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const studentNames = document.querySelector("#studentNames");
+    const shuffleButton = document.querySelector("#shuffleButton");
+    const sampleButton = document.querySelector("#sampleButton");
+    const clearButton = document.querySelector("#clearButton");
+    const studentCount = document.querySelector("#studentCount");
+    const message = document.querySelector("#message");
+    const errorMessage = document.querySelector("#errorMessage");
+    const resultArea = document.querySelector("#resultArea");
+
+    const sampleNames = ["김민준", "이서연", "박지호", "최하은", "정도윤", "강지민", "윤서아", "한유준"];
+
+    function parseNames(value) {
+      return value.split(/[\n,]+/).map((name) => name.trim()).filter(Boolean);
+    }
+
+    function shuffle(items) {
+      const copied = [...items];
+
+      for (let index = copied.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1));
+        [copied[index], copied[randomIndex]] = [copied[randomIndex], copied[index]];
+      }
+
+      return copied;
+    }
+
+    function updateCount() {
+      studentCount.textContent = `${parseNames(studentNames.value).length}명`;
+    }
+
+    function findDuplicateNames(names) {
+      const counts = new Map();
+      names.forEach((name) => counts.set(name, (counts.get(name) || 0) + 1));
+      return [...counts.entries()].filter(([, count]) => count > 1);
+    }
+
+    function clearError() {
+      errorMessage.textContent = "";
+      errorMessage.hidden = true;
+      studentNames.setAttribute("aria-invalid", "false");
+    }
+
+    function renderEmpty(text) {
+      resultArea.className = "empty-state";
+      resultArea.textContent = text;
+    }
+
+    function showError(text) {
+      message.textContent = "";
+      errorMessage.textContent = text;
+      errorMessage.hidden = false;
+      studentNames.setAttribute("aria-invalid", "true");
+      renderEmpty("아직 정해진 발표 순서가 없습니다.");
+      studentNames.focus();
+    }
+
+    function renderOrder(names) {
+      const list = document.createElement("ol");
+
+      names.forEach((name, index) => {
+        const item = document.createElement("li");
+        const rank = document.createElement("span");
+        const nameText = document.createElement("span");
+        rank.className = "rank";
+        rank.textContent = `${index + 1}`;
+        nameText.className = "name";
+        nameText.textContent = name;
+        item.append(rank, nameText);
+        list.append(item);
+      });
+
+      resultArea.className = "";
+      resultArea.replaceChildren(list);
+    }
+
+    function drawPresentationOrder() {
+      const names = parseNames(studentNames.value);
+      updateCount();
+
+      if (names.length === 0) {
+        showError("학생 이름을 2명 이상 입력해 주세요.");
+        return;
+      }
+
+      if (names.length === 1) {
+        showError("발표 순서를 만들려면 학생 이름이 2명 이상 필요합니다.");
+        return;
+      }
+
+      const orderedNames = shuffle(names);
+      const duplicates = findDuplicateNames(names);
+      const duplicateNotice = duplicates.length > 0
+        ? ` 같은 이름이 포함되어 있습니다: ${duplicates.map(([name, count]) => `${name}(${count}명)`).join(", ")}. 각각 별도의 학생으로 처리했습니다.`
+        : "";
+
+      clearError();
+      message.textContent = `총 ${orderedNames.length}명의 발표 순서가 생성되었습니다.${duplicateNotice}`;
+      renderOrder(orderedNames);
+      resultArea.focus();
+    }
+
+    shuffleButton.addEventListener("click", drawPresentationOrder);
+
+    sampleButton.addEventListener("click", () => {
+      studentNames.value = sampleNames.join("\n");
+      updateCount();
+      clearError();
+      message.textContent = "예시 이름을 넣었습니다. 발표 순서를 뽑아보세요.";
+      renderEmpty("아직 정해진 발표 순서가 없습니다.");
+      studentNames.focus();
+    });
+
+    clearButton.addEventListener("click", () => {
+      studentNames.value = "";
+      updateCount();
+      clearError();
+      message.textContent = "이름을 입력한 뒤 발표 순서를 뽑아보세요.";
+      renderEmpty("아직 정해진 발표 순서가 없습니다.");
+      studentNames.focus();
+    });
+
+    studentNames.addEventListener("input", () => {
+      updateCount();
+      clearError();
+    });
+  </script>
+</body>
+</html>
