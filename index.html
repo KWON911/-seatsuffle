@@ -673,8 +673,8 @@
         <div class="workspace" aria-label="발표 순서 생성기">
           <div class="panel input-panel">
             <label for="studentNames">학생 이름</label>
-            <textarea id="studentNames" placeholder="예:&#10;김민준&#10;이서연&#10;박지호&#10;최하은"></textarea>
-            <p class="hint">한 줄에 한 명씩 입력하거나 쉼표로 구분해도 됩니다.</p>
+            <textarea id="studentNames" aria-describedby="studentNamesHint" aria-invalid="false" placeholder="예:&#10;김민준&#10;이서연&#10;박지호&#10;최하은"></textarea>
+            <p class="hint" id="studentNamesHint">학생 이름은 한 줄에 한 명씩 또는 쉼표로 구분해 입력할 수 있습니다. 빈 줄은 자동으로 무시되며, 같은 이름을 여러 번 입력하면 각각 별도의 학생으로 처리됩니다.</p>
             <div class="actions">
               <button class="primary" id="shuffleButton" type="button">발표 순서 뽑기</button>
               <button class="secondary" id="sampleButton" type="button">예시 입력</button>
@@ -684,11 +684,12 @@
 
           <div class="panel result-panel">
             <div class="result-header">
-              <h3>발표 순서</h3>
-              <span class="count" id="studentCount">0명</span>
+              <h3 id="resultTitle">발표 순서</h3>
+              <span class="count" id="studentCount" aria-live="polite" aria-atomic="true">0명</span>
             </div>
-            <p class="message" id="message">이름을 입력한 뒤 발표 순서를 뽑아보세요.</p>
-            <div id="resultArea" class="empty-state">아직 정해진 발표 순서가 없습니다.</div>
+            <p class="message" id="message" role="status" aria-live="polite" aria-atomic="true">이름을 입력한 뒤 발표 순서를 뽑아보세요.</p>
+            <p class="message error" id="errorMessage" role="alert" hidden></p>
+            <div id="resultArea" class="empty-state" role="region" aria-labelledby="resultTitle" tabindex="-1">아직 정해진 발표 순서가 없습니다.</div>
           </div>
         </div>
       </div>
@@ -765,6 +766,7 @@
     const clearButton = document.querySelector("#clearButton");
     const studentCount = document.querySelector("#studentCount");
     const message = document.querySelector("#message");
+    const errorMessage = document.querySelector("#errorMessage");
     const resultArea = document.querySelector("#resultArea");
 
     const sampleNames = [
@@ -801,6 +803,31 @@
       studentCount.textContent = `${names.length}명`;
     }
 
+    function findDuplicateNames(names) {
+      const counts = new Map();
+
+      names.forEach((name) => {
+        counts.set(name, (counts.get(name) || 0) + 1);
+      });
+
+      return [...counts.entries()].filter(([, count]) => count > 1);
+    }
+
+    function clearError() {
+      errorMessage.textContent = "";
+      errorMessage.hidden = true;
+      studentNames.setAttribute("aria-invalid", "false");
+    }
+
+    function showError(text) {
+      message.textContent = "";
+      errorMessage.textContent = text;
+      errorMessage.hidden = false;
+      studentNames.setAttribute("aria-invalid", "true");
+      renderEmpty("아직 정해진 발표 순서가 없습니다.");
+      studentNames.focus();
+    }
+
     function renderEmpty(text) {
       resultArea.className = "empty-state";
       resultArea.textContent = text;
@@ -832,17 +859,25 @@
       updateCount();
 
       if (names.length === 0) {
-        message.textContent = "발표 순서를 정하려면 학생 이름을 1명 이상 입력하세요.";
-        message.className = "message error";
-        renderEmpty("입력된 이름이 없습니다.");
-        studentNames.focus();
+        showError("학생 이름을 2명 이상 입력해 주세요.");
+        return;
+      }
+
+      if (names.length === 1) {
+        showError("발표 순서를 만들려면 학생 이름이 2명 이상 필요합니다.");
         return;
       }
 
       const orderedNames = shuffle(names);
-      message.textContent = `총 ${orderedNames.length}명의 발표 순서가 정해졌습니다.`;
-      message.className = "message";
+      const duplicates = findDuplicateNames(names);
+      const duplicateNotice = duplicates.length > 0
+        ? ` 같은 이름이 포함되어 있습니다: ${duplicates.map(([name, count]) => `${name}(${count}명)`).join(", ")}. 각각 별도의 학생으로 처리했습니다.`
+        : "";
+
+      clearError();
+      message.textContent = `총 ${orderedNames.length}명의 발표 순서가 생성되었습니다.${duplicateNotice}`;
       renderOrder(orderedNames);
+      resultArea.focus();
     }
 
     shuffleButton.addEventListener("click", drawPresentationOrder);
@@ -850,8 +885,8 @@
     sampleButton.addEventListener("click", () => {
       studentNames.value = sampleNames.join("\n");
       updateCount();
+      clearError();
       message.textContent = "예시 이름을 넣었습니다. 발표 순서를 뽑아보세요.";
-      message.className = "message";
       renderEmpty("아직 정해진 발표 순서가 없습니다.");
       studentNames.focus();
     });
@@ -859,13 +894,16 @@
     clearButton.addEventListener("click", () => {
       studentNames.value = "";
       updateCount();
+      clearError();
       message.textContent = "이름을 입력한 뒤 발표 순서를 뽑아보세요.";
-      message.className = "message";
       renderEmpty("아직 정해진 발표 순서가 없습니다.");
       studentNames.focus();
     });
 
-    studentNames.addEventListener("input", updateCount);
+    studentNames.addEventListener("input", () => {
+      updateCount();
+      clearError();
+    });
   </script>
 </body>
 </html>
