@@ -162,6 +162,13 @@
     .student-list { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
     .student-list li { padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; background: #fbfdff; overflow-wrap: anywhere; }
     .student-count { margin-top: 10px; color: var(--primary-dark); font-weight: 800; }
+    .student-edit-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(120px, 0.45fr); gap: 10px; align-items: end; }
+    .student-number { min-width: 30px; padding-bottom: 13px; color: var(--primary-dark); font-weight: 800; }
+    .student-edit-field { display: grid; gap: 6px; }
+    .student-edit-field label { font-size: 0.9rem; }
+    .student-edit-row input, .student-edit-row select { min-height: 42px; }
+    .student-row-actions { display: flex; flex-wrap: wrap; grid-column: 2 / -1; gap: 10px; }
+    .student-row-actions button { min-height: 42px; }
 
     [hidden] { display: none !important; }
 
@@ -174,6 +181,9 @@
       .form-grid .full-width { grid-column: auto; }
       .list-header { align-items: stretch; flex-direction: column; }
       .roster-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
+      .student-edit-row { grid-template-columns: 1fr; }
+      .student-number { padding-bottom: 0; }
+      .student-row-actions { display: grid; grid-column: auto; grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -342,6 +352,7 @@
       const defaultButtonText = "로그인 링크 받기";
       const defaultCreateRosterText = "학급 만들기";
       const defaultSaveStudentsText = "학생 명단 저장";
+      const studentGenderCodes = new Set(["male", "female", "unspecified"]);
       const rosterActionRosterIds = new WeakMap();
       let cooldownSeconds = 0;
       let cooldownTimer = null;
@@ -357,6 +368,7 @@
       let studentViewVersion = 0;
       let isStudentListLoading = false;
       let isSavingStudents = false;
+      let isStudentMutation = false;
 
       schoolYearInput.value = String(new Date().getFullYear());
 
@@ -448,7 +460,7 @@
       }
 
       function updateRosterActionAvailability() {
-        const shouldDisable = isRosterListLoading || isRosterMutation || isSavingStudents || !currentSignedInEmail;
+        const shouldDisable = isRosterListLoading || isRosterMutation || isSavingStudents || isStudentMutation || !currentSignedInEmail;
         rosterList.querySelectorAll("[data-roster-action]").forEach((button) => {
           button.disabled = shouldDisable || button.dataset.selectedRoster === "true";
         });
@@ -456,9 +468,17 @@
       }
 
       function updateStudentActionAvailability() {
-        const shouldDisable = isStudentListLoading || isSavingStudents || !selectedRoster || !currentSignedInEmail;
+        const shouldDisable = isStudentListLoading || isSavingStudents || isStudentMutation || !selectedRoster || !currentSignedInEmail;
         saveStudentsButton.disabled = shouldDisable;
         reloadStudentsButton.disabled = shouldDisable;
+        updateStudentRowAvailability();
+      }
+
+      function updateStudentRowAvailability() {
+        const shouldDisable = isStudentListLoading || isSavingStudents || isStudentMutation || !selectedRoster || !currentSignedInEmail;
+        studentList.querySelectorAll("[data-student-control]").forEach((control) => {
+          control.disabled = shouldDisable;
+        });
       }
 
       function clearStudentFormMessages() {
@@ -475,6 +495,7 @@
         selectedStudents = [];
         isStudentListLoading = false;
         isSavingStudents = false;
+        isStudentMutation = false;
         studentNamesInput.value = "";
         saveStudentsButton.textContent = defaultSaveStudentsText;
         selectedRosterSummary.textContent = "";
@@ -644,7 +665,7 @@
       }
 
       function selectRosterForStudentManagement(roster) {
-        if (isSavingStudents || !currentSignedInEmail) return;
+        if (isSavingStudents || isStudentMutation || !currentSignedInEmail) return;
 
         studentRequestVersion += 1;
         studentViewVersion += 1;
@@ -691,9 +712,81 @@
 
         students.forEach((student, index) => {
           const item = document.createElement("li");
-          item.textContent = `${index + 1}. ${student.display_name}`;
+          const number = document.createElement("span");
+          const nameField = document.createElement("div");
+          const nameLabel = document.createElement("label");
+          const nameInput = document.createElement("input");
+          const genderField = document.createElement("div");
+          const genderLabel = document.createElement("label");
+          const genderSelect = document.createElement("select");
+          const actions = document.createElement("div");
+          const saveButton = document.createElement("button");
+          const deleteButton = document.createElement("button");
+          const displayNumber = index + 1;
+          const inputId = `student-name-${displayNumber}`;
+          const genderId = `student-gender-${displayNumber}`;
+          const genderCode = studentGenderCodes.has(student.gender_code)
+            ? student.gender_code
+            : "unspecified";
+
+          item.className = "student-edit-row";
+          number.className = "student-number";
+          number.textContent = `${displayNumber}.`;
+
+          nameField.className = "student-edit-field";
+          nameLabel.htmlFor = inputId;
+          nameLabel.textContent = `${displayNumber}번 학생 이름`;
+          nameInput.id = inputId;
+          nameInput.type = "text";
+          nameInput.autocomplete = "off";
+          nameInput.value = student.display_name;
+          nameInput.setAttribute("aria-invalid", "false");
+          nameInput.dataset.studentControl = "name";
+          nameField.append(nameLabel, nameInput);
+
+          genderField.className = "student-edit-field";
+          genderLabel.htmlFor = genderId;
+          genderLabel.textContent = `${displayNumber}번 학생 성별`;
+          genderSelect.id = genderId;
+          genderSelect.dataset.studentControl = "gender";
+          [
+            ["unspecified", "미입력"],
+            ["male", "남"],
+            ["female", "여"]
+          ].forEach(([value, label]) => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = label;
+            genderSelect.append(option);
+          });
+          genderSelect.value = genderCode;
+          genderField.append(genderLabel, genderSelect);
+
+          actions.className = "student-row-actions";
+          saveButton.type = "button";
+          saveButton.className = "secondary";
+          saveButton.dataset.studentControl = "save";
+          saveButton.setAttribute("aria-label", `${displayNumber}번 학생 정보 저장`);
+          saveButton.textContent = "변경 저장";
+          saveButton.addEventListener("click", () => {
+            updateStudent(student, nameInput, genderSelect, saveButton);
+          });
+
+          deleteButton.type = "button";
+          deleteButton.className = "danger-button";
+          deleteButton.dataset.studentControl = "delete";
+          deleteButton.setAttribute("aria-label", `${displayNumber}번 학생 삭제`);
+          deleteButton.textContent = "학생 삭제";
+          deleteButton.addEventListener("click", () => {
+            deleteStudent(student, deleteButton);
+          });
+          actions.append(saveButton, deleteButton);
+
+          item.append(number, nameField, genderField, actions);
           studentList.append(item);
         });
+
+        updateStudentRowAvailability();
       }
 
       async function loadStudents() {
@@ -749,6 +842,123 @@
         }
       }
 
+      function isCurrentStudentView(rosterId, email, viewVersion) {
+        return (
+          currentSignedInEmail === email &&
+          selectedRoster &&
+          selectedRoster.id === rosterId &&
+          studentViewVersion === viewVersion
+        );
+      }
+
+      async function updateStudent(student, nameInput, genderSelect, saveButton) {
+        if (isSavingStudents || isStudentMutation || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
+
+        const displayName = nameInput.value.trim();
+        const genderCode = genderSelect.value;
+        const originalGenderCode = studentGenderCodes.has(student.gender_code)
+          ? student.gender_code
+          : "unspecified";
+
+        studentListMessage.textContent = "";
+        studentListError.textContent = "";
+        studentListError.hidden = true;
+        nameInput.setAttribute("aria-invalid", "false");
+
+        if (!displayName) {
+          nameInput.setAttribute("aria-invalid", "true");
+          nameInput.focus();
+          studentListError.textContent = "학생 이름을 입력해 주세요.";
+          studentListError.hidden = false;
+          return;
+        }
+        if (!studentGenderCodes.has(genderCode)) {
+          genderSelect.focus();
+          studentListError.textContent = "성별 정보는 남, 여, 미입력 중 하나를 선택해 주세요.";
+          studentListError.hidden = false;
+          return;
+        }
+        if (displayName === student.display_name && genderCode === originalGenderCode) {
+          studentListMessage.textContent = "변경된 내용이 없습니다.";
+          return;
+        }
+
+        const selectedRosterIdAtAction = selectedRoster.id;
+        const signedInEmailAtAction = currentSignedInEmail;
+        const studentViewVersionAtAction = studentViewVersion;
+        isStudentMutation = true;
+        saveButton.textContent = "저장 중...";
+        updateStudentActionAvailability();
+        updateRosterActionAvailability();
+        studentListMessage.textContent = "학생 정보를 저장하고 있습니다.";
+
+        try {
+          await window.kwonClassRosterService.updateStudent(student.id, {
+            displayName,
+            genderCode
+          });
+          if (!isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) return;
+
+          await loadStudents();
+          if (isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) {
+            studentListMessage.textContent = "학생 정보가 수정되었습니다.";
+          }
+        } catch (error) {
+          if (!isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) return;
+          studentListMessage.textContent = "";
+          studentListError.textContent = error.message;
+          studentListError.hidden = false;
+          reloadStudentsButton.hidden = false;
+        } finally {
+          if (isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) {
+            isStudentMutation = false;
+            updateStudentActionAvailability();
+            updateRosterActionAvailability();
+          }
+        }
+      }
+
+      async function deleteStudent(student, button) {
+        if (isSavingStudents || isStudentMutation || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
+
+        const confirmationMessage =
+          "이 학생을 명단에서 삭제하시겠습니까?\n삭제한 학생 정보는 되돌릴 수 없습니다.";
+        if (!window.confirm(confirmationMessage)) return;
+
+        const selectedRosterIdAtAction = selectedRoster.id;
+        const signedInEmailAtAction = currentSignedInEmail;
+        const studentViewVersionAtAction = studentViewVersion;
+        isStudentMutation = true;
+        button.textContent = "삭제 중...";
+        updateStudentActionAvailability();
+        updateRosterActionAvailability();
+        studentListMessage.textContent = "학생을 삭제하고 있습니다.";
+        studentListError.textContent = "";
+        studentListError.hidden = true;
+
+        try {
+          await window.kwonClassRosterService.deleteStudent(student.id);
+          if (!isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) return;
+
+          await loadStudents();
+          if (isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) {
+            studentListMessage.textContent = "학생이 삭제되었습니다.";
+          }
+        } catch (error) {
+          if (!isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) return;
+          studentListMessage.textContent = "";
+          studentListError.textContent = error.message;
+          studentListError.hidden = false;
+          reloadStudentsButton.hidden = false;
+        } finally {
+          if (isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) {
+            isStudentMutation = false;
+            updateStudentActionAvailability();
+            updateRosterActionAvailability();
+          }
+        }
+      }
+
       function getStudentsForSave() {
         clearStudentFormMessages();
         const names = studentNamesInput.value
@@ -782,7 +992,7 @@
 
       studentForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (isSavingStudents || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
+        if (isSavingStudents || isStudentMutation || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
 
         let students;
         try {
@@ -848,7 +1058,7 @@
       });
 
       async function setDefaultRoster(roster, button) {
-        if (isRosterMutation || isRosterListLoading || !currentSignedInEmail || roster.is_default) return;
+        if (isRosterMutation || isRosterListLoading || isSavingStudents || isStudentMutation || !currentSignedInEmail || roster.is_default) return;
 
         const signedInEmailAtAction = currentSignedInEmail;
         isRosterMutation = true;
@@ -881,7 +1091,7 @@
       }
 
       async function deleteRoster(roster, button) {
-        if (isRosterMutation || isRosterListLoading || !currentSignedInEmail) return;
+        if (isRosterMutation || isRosterListLoading || isSavingStudents || isStudentMutation || !currentSignedInEmail) return;
 
         let confirmationMessage =
           "이 학급을 삭제하시겠습니까?\n학급에 저장된 학생 명단도 함께 삭제되며 되돌릴 수 없습니다.";
