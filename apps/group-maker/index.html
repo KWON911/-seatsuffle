@@ -95,7 +95,7 @@
 
     input[type="number"] { min-height: 46px; padding: 0 12px; }
 
-    textarea:focus, input[type="number"]:focus, input[type="radio"]:focus-visible {
+    textarea:focus, input[type="number"]:focus, input[type="radio"]:focus-visible, input[type="checkbox"]:focus-visible {
       border-color: var(--primary);
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
     }
@@ -147,6 +147,10 @@
 
     .mode-option:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-dark); }
     .mode-option input { width: 18px; height: 18px; accent-color: var(--primary); }
+    .gender-balance-option { margin-top: -4px; }
+    .gender-balance-option .mode-option { cursor: pointer; }
+    .gender-balance-option .mode-option:has(input:disabled) { cursor: not-allowed; color: #94a3b8; background: #f6f8fa; border-style: dashed; }
+    .gender-balance-option input { width: 18px; height: 18px; accent-color: var(--primary); }
 
     .setting-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
     .setting-field { padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: #fbfdff; }
@@ -252,6 +256,15 @@
           </div>
         </fieldset>
 
+        <fieldset class="gender-balance-option" aria-describedby="genderBalanceHint">
+          <legend>추가 배정 옵션</legend>
+          <label class="mode-option" for="genderBalanceOption">
+            <input id="genderBalanceOption" type="checkbox" disabled>
+            성별을 고려하여 모둠을 고르게 구성
+          </label>
+          <p class="hint" id="genderBalanceHint" role="status" aria-live="polite" aria-atomic="true">성별 균형 배정은 공통 학급 명단을 불러온 경우에 사용할 수 있습니다.</p>
+        </fieldset>
+
         <div class="setting-grid">
           <div class="setting-field" id="groupCountField">
             <label for="groupCount">모둠 수</label>
@@ -311,6 +324,8 @@
     const resultArea = document.querySelector("#resultArea");
     const loadDefaultRosterButton = document.querySelector("#loadDefaultRosterButton");
     const sharedRosterStatus = document.querySelector("#sharedRosterStatus");
+    const genderBalanceOption = document.querySelector("#genderBalanceOption");
+    const genderBalanceHint = document.querySelector("#genderBalanceHint");
 
     const sampleNames = ["김민준", "이서연", "박지호", "최하은", "정도윤", "강지민", "윤서아", "한유준", "서지후", "임가은"];
     let lastSettings = null;
@@ -319,9 +334,61 @@
     let commonRosterRequestVersion = 0;
     let isCommonRosterLoading = false;
     let isCommonRosterSignedIn = false;
+    let loadedRosterStudents = [];
+    let loadedRosterText = "";
+    let genderRosterState = "direct";
 
     function parseNames(value) {
       return value.split(/[\n,]+/).map((name) => name.trim()).filter(Boolean);
+    }
+
+    function normalizeGenderCode(value) {
+      return value === "male" || value === "female" ? value : "unspecified";
+    }
+
+    function clearLoadedRosterGenderData() {
+      loadedRosterStudents = [];
+      loadedRosterText = "";
+      genderRosterState = "direct";
+    }
+
+    function invalidateGenderConnection() {
+      if (genderRosterState !== "loaded") return;
+
+      loadedRosterStudents = [];
+      genderRosterState = "modified";
+      genderBalanceOption.checked = false;
+      updateGenderBalanceAvailability();
+    }
+
+    function updateGenderBalanceAvailability() {
+      const hasGenderInfo = loadedRosterStudents.some(
+        (student) => student.genderCode === "male" || student.genderCode === "female"
+      );
+      const canUseGenderBalance =
+        genderRosterState === "loaded" &&
+        studentNames.value === loadedRosterText &&
+        hasGenderInfo;
+
+      genderBalanceOption.disabled = !canUseGenderBalance;
+      if (!canUseGenderBalance) genderBalanceOption.checked = false;
+
+      if (canUseGenderBalance) {
+        genderBalanceHint.textContent = "공통 학급 명단의 남·여 정보를 이용해 각 모둠에 가능한 고르게 배정합니다. 성별 미입력 학생은 일반 무작위 방식으로 배정됩니다.";
+      } else if (genderRosterState === "modified") {
+        genderBalanceHint.textContent = "학생 이름을 수정하여 성별 연결이 해제되었습니다. 성별 균형 배정을 사용하려면 기본 학급 명단을 다시 불러와 주세요.";
+      } else if (genderRosterState === "loaded") {
+        genderBalanceHint.textContent = "기본 학급에 남·여 정보가 입력된 학생이 없습니다.";
+      } else {
+        genderBalanceHint.textContent = "성별 균형 배정은 공통 학급 명단을 불러온 경우에 사용할 수 있습니다.";
+      }
+    }
+
+    function canUseGenderBalance() {
+      return !genderBalanceOption.disabled &&
+        genderBalanceOption.checked &&
+        genderRosterState === "loaded" &&
+        studentNames.value === loadedRosterText;
     }
 
     function shuffle(items) {
@@ -445,21 +512,30 @@
           return;
         }
 
-        const students = await window.kwonClassRosterService.listStudents(defaultRoster.id, {
-          includeInactive: false
-        });
+        const rosterStudents = (
+          await window.kwonClassRosterService.listStudents(defaultRoster.id, {
+            includeInactive: false
+          })
+        ).map(({ display_name, gender_code }) => ({
+          displayName: display_name,
+          genderCode: normalizeGenderCode(gender_code)
+        }));
         if (!isCurrentCommonRosterRequest(requestVersion, authVersion)) return;
 
-        if (students.length === 0) {
+        if (rosterStudents.length === 0) {
           showCommonRosterStatus("기본 학급에 저장된 학생이 없습니다.");
           return;
         }
 
-        studentNames.value = students.map((student) => student.display_name).join("\n");
+        loadedRosterStudents = rosterStudents;
+        loadedRosterText = loadedRosterStudents.map((student) => student.displayName).join("\n");
+        genderRosterState = "loaded";
+        studentNames.value = loadedRosterText;
         updateCount();
         clearError();
         clearGroupsForNameChange();
-        showCommonRosterStatus(`기본 학급에서 학생 ${students.length}명의 이름을 불러왔습니다.`);
+        updateGenderBalanceAvailability();
+        showCommonRosterStatus(`기본 학급에서 학생 ${rosterStudents.length}명의 이름을 불러왔습니다.`);
       } catch (error) {
         if (!isCurrentCommonRosterRequest(requestVersion, authVersion)) return;
         showCommonRosterStatus(getCommonRosterErrorMessage(error));
@@ -593,9 +669,86 @@
       return groups;
     }
 
+    function getGroupTargetSizes(studentTotal, numberOfGroups) {
+      const baseSize = Math.floor(studentTotal / numberOfGroups);
+      const extraStudents = studentTotal % numberOfGroups;
+      return Array.from(
+        { length: numberOfGroups },
+        (_, index) => baseSize + (index < extraStudents ? 1 : 0)
+      );
+    }
+
+    function chooseRandom(candidates) {
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+
+    function selectBalancedGroup(groups, targetSizes, genderCounts, genderCode) {
+      const candidates = groups
+        .map((group, index) => index)
+        .filter((index) => groups[index].length < targetSizes[index]);
+      const lowestGenderCount = Math.min(
+        ...candidates.map((index) => genderCounts[genderCode][index])
+      );
+      const genderCandidates = candidates.filter(
+        (index) => genderCounts[genderCode][index] === lowestGenderCount
+      );
+      const lowestGroupSize = Math.min(
+        ...genderCandidates.map((index) => groups[index].length)
+      );
+      return chooseRandom(
+        genderCandidates.filter((index) => groups[index].length === lowestGroupSize)
+      );
+    }
+
+    function selectSmallestGroup(groups, targetSizes) {
+      const candidates = groups
+        .map((group, index) => index)
+        .filter((index) => groups[index].length < targetSizes[index]);
+      const lowestGroupSize = Math.min(...candidates.map((index) => groups[index].length));
+      return chooseRandom(candidates.filter((index) => groups[index].length === lowestGroupSize));
+    }
+
+    function makeGenderBalancedGroups(students, numberOfGroups) {
+      const targetSizes = getGroupTargetSizes(students.length, numberOfGroups);
+      const groups = targetSizes.map(() => []);
+      const genderCounts = {
+        male: targetSizes.map(() => 0),
+        female: targetSizes.map(() => 0)
+      };
+      const maleStudents = shuffle(students.filter((student) => student.genderCode === "male"));
+      const femaleStudents = shuffle(students.filter((student) => student.genderCode === "female"));
+      const unspecifiedStudents = shuffle(students.filter((student) => student.genderCode === "unspecified"));
+
+      // 더 많은 성별 범주를 먼저 분산해 두 성별 모두의 편차를 줄입니다.
+      [
+        { genderCode: "male", students: maleStudents },
+        { genderCode: "female", students: femaleStudents }
+      ]
+        .sort((first, second) => second.students.length - first.students.length)
+        .forEach(({ genderCode, students: studentsForGender }) => {
+          studentsForGender.forEach((student) => {
+            const groupIndex = selectBalancedGroup(groups, targetSizes, genderCounts, genderCode);
+            groups[groupIndex].push(student);
+            genderCounts[genderCode][groupIndex] += 1;
+          });
+        });
+
+      unspecifiedStudents.forEach((student) => {
+        const groupIndex = selectSmallestGroup(groups, targetSizes);
+        groups[groupIndex].push(student);
+      });
+
+      return groups;
+    }
+
     function hasValidAssignment(groups, studentTotal) {
       const assignedIndexes = groups.flat().map((student) => student.index);
       return assignedIndexes.length === studentTotal && new Set(assignedIndexes).size === studentTotal;
+    }
+
+    function hasValidGroupSizes(groups, studentTotal, numberOfGroups) {
+      const targetSizes = getGroupTargetSizes(studentTotal, numberOfGroups);
+      return groups.every((group, index) => group.length === targetSizes[index]);
     }
 
     function renderGroups(groups) {
@@ -624,9 +777,22 @@
     }
 
     function createGroups(settings) {
-      const groups = makeBalancedGroups(settings.names, settings.numberOfGroups);
+      const useGenderBalance = canUseGenderBalance();
+      const genderBalancedStudents = useGenderBalance
+        ? settings.names.map((name, index) => ({
+          name,
+          index,
+          genderCode: loadedRosterStudents[index]?.genderCode || "unspecified"
+        }))
+        : null;
+      const groups = useGenderBalance
+        ? makeGenderBalancedGroups(genderBalancedStudents, settings.numberOfGroups)
+        : makeBalancedGroups(settings.names, settings.numberOfGroups);
 
-      if (!hasValidAssignment(groups, settings.names.length)) {
+      if (
+        !hasValidAssignment(groups, settings.names.length) ||
+        !hasValidGroupSizes(groups, settings.names.length, settings.numberOfGroups)
+      ) {
         showError("학생 배정 확인 중 문제가 발생했습니다. 다시 시도해 주세요.", makeGroupsButton);
         return false;
       }
@@ -635,7 +801,9 @@
       lastSettings = { ...settings, names: [...settings.names] };
       lastGroups = groups;
       const duplicates = findDuplicateNames(settings.names);
-      statusMessage.textContent = `총 ${settings.names.length}명을 ${settings.numberOfGroups}개 모둠으로 배정했습니다.`;
+      statusMessage.textContent = useGenderBalance
+        ? `총 ${settings.names.length}명을 ${settings.numberOfGroups}개 모둠으로 배정했습니다. 성별 정보가 입력된 학생을 모둠별로 가능한 고르게 배정했습니다.`
+        : `총 ${settings.names.length}명을 ${settings.numberOfGroups}개 모둠으로 배정했습니다.`;
       duplicateMessage.textContent = duplicates.length > 0
         ? `같은 이름이 포함되어 있습니다: ${duplicates.map(([name, count]) => `${name}(${count}명)`).join(", ")}. 각각 별도의 학생으로 처리했습니다.`
         : "";
@@ -688,6 +856,9 @@
       updateCount();
       lastSettings = null;
       lastGroups = null;
+      clearLoadedRosterGenderData();
+      genderBalanceOption.checked = false;
+      updateGenderBalanceAvailability();
       clearError();
       clearDuplicateNotice();
       statusMessage.textContent = "학생 이름과 배정 방식을 설정한 뒤 모둠을 만들어 보세요.";
@@ -697,6 +868,9 @@
     }
 
     studentNames.addEventListener("input", () => {
+      if (genderRosterState === "loaded" && studentNames.value !== loadedRosterText) {
+        invalidateGenderConnection();
+      }
       updateCount();
       clearGroupsForNameChange();
       clearError();
@@ -706,6 +880,9 @@
     groupCount.addEventListener("input", clearError);
     membersPerGroup.addEventListener("input", clearError);
     sampleButton.addEventListener("click", () => {
+      clearLoadedRosterGenderData();
+      genderBalanceOption.checked = false;
+      updateGenderBalanceAvailability();
       studentNames.value = sampleNames.join("\n");
       updateCount();
       clearGroupsForNameChange();
@@ -720,8 +897,12 @@
     copyButton.addEventListener("click", copyResults);
     clearButton.addEventListener("click", resetApp);
     loadDefaultRosterButton.addEventListener("click", loadDefaultRoster);
+    genderBalanceOption.addEventListener("change", () => {
+      if (!canUseGenderBalance()) genderBalanceOption.checked = false;
+    });
     updateCount();
     updateModeControls();
+    updateGenderBalanceAvailability();
     updateCommonRosterButton();
     checkCommonRosterLogin();
 
