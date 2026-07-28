@@ -150,6 +150,10 @@
     .roster-name { margin: 0 0 6px; overflow-wrap: anywhere; font-weight: 800; }
     .roster-detail { color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
     .default-badge { display: inline-block; margin-top: 8px; padding: 4px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-dark); font-size: 0.85rem; font-weight: 800; }
+    .roster-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .roster-actions button { min-height: 42px; }
+    .danger-button { color: var(--danger); border: 1px solid #e7b7b7; background: #ffffff; }
+    .danger-button:hover:not(:disabled), .danger-button:focus-visible:not(:disabled) { background: #fff3f3; }
     .empty-state { margin-top: 14px; padding: 18px; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); text-align: center; line-height: 1.6; background: #fbfdff; }
 
     [hidden] { display: none !important; }
@@ -162,6 +166,7 @@
       .form-grid { grid-template-columns: 1fr; }
       .form-grid .full-width { grid-column: auto; }
       .list-header { align-items: stretch; flex-direction: column; }
+      .roster-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
     }
   </style>
 </head>
@@ -293,6 +298,8 @@
       let isCreatingRoster = false;
       let currentSignedInEmail = null;
       let rosterRequestVersion = 0;
+      let isRosterListLoading = false;
+      let isRosterMutation = false;
 
       schoolYearInput.value = String(new Date().getFullYear());
 
@@ -323,10 +330,14 @@
         signedOutPanel.hidden = true;
         signedInPanel.hidden = false;
         userEmail.textContent = nextEmail || "이메일 정보를 확인할 수 없습니다.";
-        rosterManagement.hidden = false;
 
         if (!isSameSession) {
           clearRosterView();
+        }
+
+        rosterManagement.hidden = false;
+
+        if (!isSameSession) {
           loadRosters();
         }
       }
@@ -379,8 +390,18 @@
         [rosterNameInput, schoolYearInput, gradeInput, classNameInput].forEach((input) => input.setAttribute("aria-invalid", "false"));
       }
 
+      function updateRosterActionAvailability() {
+        const shouldDisable = isRosterListLoading || isRosterMutation || !currentSignedInEmail;
+        rosterList.querySelectorAll("[data-roster-action]").forEach((button) => {
+          button.disabled = shouldDisable;
+        });
+        reloadRostersButton.disabled = shouldDisable;
+      }
+
       function clearRosterView() {
         rosterRequestVersion += 1;
+        isRosterListLoading = false;
+        isRosterMutation = false;
         rosterList.replaceChildren();
         rosterListMessage.textContent = "";
         rosterListError.textContent = "";
@@ -418,14 +439,51 @@
             item.append(badge);
           }
 
+          const actions = document.createElement("div");
+          actions.className = "roster-actions";
+
+          if (!roster.is_default) {
+            const defaultRosterButton = document.createElement("button");
+            defaultRosterButton.type = "button";
+            defaultRosterButton.className = "secondary";
+            defaultRosterButton.dataset.rosterAction = "set-default";
+            defaultRosterButton.setAttribute(
+              "aria-label",
+              `${roster.roster_name}을(를) 기본 학급으로 지정`
+            );
+            defaultRosterButton.textContent = "기본 학급으로 지정";
+            defaultRosterButton.addEventListener("click", () => {
+              setDefaultRoster(roster, defaultRosterButton);
+            });
+            actions.append(defaultRosterButton);
+          }
+
+          const deleteRosterButton = document.createElement("button");
+          deleteRosterButton.type = "button";
+          deleteRosterButton.className = "danger-button";
+          deleteRosterButton.dataset.rosterAction = "delete";
+          deleteRosterButton.setAttribute("aria-label", `${roster.roster_name} 학급 삭제`);
+          deleteRosterButton.textContent = "학급 삭제";
+          deleteRosterButton.addEventListener("click", () => {
+            deleteRoster(roster, deleteRosterButton);
+          });
+          actions.append(deleteRosterButton);
+
+          item.append(actions);
+
           rosterList.append(item);
         });
+
+        updateRosterActionAvailability();
       }
 
       async function loadRosters() {
         if (!currentSignedInEmail) return;
 
         const requestVersion = ++rosterRequestVersion;
+        const signedInEmailAtRequest = currentSignedInEmail;
+        isRosterListLoading = true;
+        updateRosterActionAvailability();
         rosterList.replaceChildren();
         rosterListMessage.textContent = "학급 목록을 불러오고 있습니다.";
         rosterListError.textContent = "";
@@ -434,15 +492,95 @@
 
         try {
           const rosters = await window.kwonClassRosterService.listRosters();
-          if (requestVersion !== rosterRequestVersion || !currentSignedInEmail) return;
+          if (requestVersion !== rosterRequestVersion || signedInEmailAtRequest !== currentSignedInEmail) return;
           rosterListMessage.textContent = "";
           renderRosters(rosters);
         } catch (error) {
-          if (requestVersion !== rosterRequestVersion || !currentSignedInEmail) return;
+          if (requestVersion !== rosterRequestVersion || signedInEmailAtRequest !== currentSignedInEmail) return;
           rosterListMessage.textContent = "";
           rosterListError.textContent = error.message;
           rosterListError.hidden = false;
           reloadRostersButton.hidden = false;
+        } finally {
+          if (requestVersion === rosterRequestVersion && signedInEmailAtRequest === currentSignedInEmail) {
+            isRosterListLoading = false;
+            updateRosterActionAvailability();
+          }
+        }
+      }
+
+      async function setDefaultRoster(roster, button) {
+        if (isRosterMutation || isRosterListLoading || !currentSignedInEmail || roster.is_default) return;
+
+        const signedInEmailAtAction = currentSignedInEmail;
+        isRosterMutation = true;
+        button.textContent = "지정 중...";
+        updateRosterActionAvailability();
+        rosterListMessage.textContent = "기본 학급을 지정하고 있습니다.";
+        rosterListError.textContent = "";
+        rosterListError.hidden = true;
+
+        try {
+          await window.kwonClassRosterService.setDefaultRoster(roster.id);
+          if (signedInEmailAtAction !== currentSignedInEmail) return;
+
+          await loadRosters();
+          if (signedInEmailAtAction === currentSignedInEmail) {
+            rosterListMessage.textContent = "기본 학급이 변경되었습니다.";
+          }
+        } catch (error) {
+          if (signedInEmailAtAction !== currentSignedInEmail) return;
+          rosterListMessage.textContent = "";
+          rosterListError.textContent = error.message;
+          rosterListError.hidden = false;
+          reloadRostersButton.hidden = false;
+        } finally {
+          if (signedInEmailAtAction === currentSignedInEmail) {
+            isRosterMutation = false;
+            updateRosterActionAvailability();
+          }
+        }
+      }
+
+      async function deleteRoster(roster, button) {
+        if (isRosterMutation || isRosterListLoading || !currentSignedInEmail) return;
+
+        let confirmationMessage =
+          "이 학급을 삭제하시겠습니까?\n학급에 저장된 학생 명단도 함께 삭제되며 되돌릴 수 없습니다.";
+        if (roster.is_default) {
+          confirmationMessage += "\n\n현재 기본 학급입니다. 삭제하면 기본 학급이 없는 상태가 됩니다.";
+        }
+
+        if (!window.confirm(confirmationMessage)) return;
+
+        const signedInEmailAtAction = currentSignedInEmail;
+        isRosterMutation = true;
+        button.textContent = "삭제 중...";
+        updateRosterActionAvailability();
+        rosterListMessage.textContent = "학급을 삭제하고 있습니다.";
+        rosterListError.textContent = "";
+        rosterListError.hidden = true;
+
+        try {
+          // 데이터베이스의 ON DELETE CASCADE로 연결된 학생도 함께 삭제됩니다.
+          await window.kwonClassRosterService.deleteRoster(roster.id);
+          if (signedInEmailAtAction !== currentSignedInEmail) return;
+
+          await loadRosters();
+          if (signedInEmailAtAction === currentSignedInEmail) {
+            rosterListMessage.textContent = "학급이 삭제되었습니다.";
+          }
+        } catch (error) {
+          if (signedInEmailAtAction !== currentSignedInEmail) return;
+          rosterListMessage.textContent = "";
+          rosterListError.textContent = error.message;
+          rosterListError.hidden = false;
+          reloadRostersButton.hidden = false;
+        } finally {
+          if (signedInEmailAtAction === currentSignedInEmail) {
+            isRosterMutation = false;
+            updateRosterActionAvailability();
+          }
         }
       }
 
