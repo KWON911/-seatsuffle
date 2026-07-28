@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모둠 자동 배정 | 권쌤의 교사용 웹앱</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #ffffff;
+      --soft-bg: #f4f8fc;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #64748b;
+      --border: #d9e4ef;
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --primary-soft: #eaf2ff;
+      --danger: #b44747;
+      --shadow: 0 16px 40px rgba(37, 99, 235, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 56px; }
+    a { color: inherit; text-decoration: none; }
+
+    .back-link {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      color: var(--primary-dark);
+      font-weight: 800;
+    }
+
+    .back-link:hover,
+    .back-link:focus-visible { text-decoration: underline; }
+
+    header { max-width: 760px; margin: 38px 0 28px; }
+
+    h1 {
+      margin: 0 0 12px;
+      color: var(--primary-dark);
+      font-size: clamp(2rem, 6vw, 3.2rem);
+      line-height: 1.15;
+    }
+
+    .intro, .hint, .message { color: var(--muted); line-height: 1.6; }
+    .intro { margin: 0; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(330px, 440px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    h2 { margin: 0; font-size: 1.16rem; line-height: 1.35; }
+    .panel > h2 { margin-bottom: 18px; }
+
+    label, legend { display: block; margin-bottom: 10px; font-size: 1.02rem; font-weight: 800; }
+
+    textarea, input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font: inherit;
+      background: #fbfdff;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 190px;
+      resize: vertical;
+      padding: 14px;
+      line-height: 1.55;
+    }
+
+    input[type="number"] { min-height: 46px; padding: 0 12px; }
+
+    textarea:focus, input[type="number"]:focus, input[type="radio"]:focus-visible {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+    }
+
+    textarea[aria-invalid="true"], input[aria-invalid="true"] { border-color: var(--danger); }
+    input:disabled { cursor: not-allowed; border-color: #e5e7eb; color: #94a3b8; background: #eef2f6; }
+    .hint { margin: 10px 0 18px; font-size: 0.95rem; }
+
+    .count {
+      display: inline-flex;
+      margin: 0 0 18px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    fieldset { margin: 0 0 18px; padding: 0; border: 0; }
+    .mode-options { display: grid; gap: 10px; }
+
+    .mode-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfdff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .mode-option:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-dark); }
+    .mode-option input { width: 18px; height: 18px; accent-color: var(--primary); }
+
+    .setting-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .setting-field { padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: #fbfdff; }
+    .setting-field.disabled { border-style: dashed; background: #f6f8fa; }
+    .setting-field.disabled label { color: #94a3b8; }
+    .setting-field label { font-size: 0.95rem; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 16px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .primary { background: var(--primary); color: #ffffff; }
+    .primary:hover { background: var(--primary-dark); }
+    .secondary { background: var(--primary-soft); color: var(--primary-dark); }
+    .secondary:hover { background: #d8e8ff; }
+    .ghost { border: 1px solid #efcaca; background: transparent; color: var(--danger); }
+    .ghost:hover { background: #fff1f1; }
+
+    .result-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .message { min-height: 24px; margin: 0 0 12px; }
+    .message.error { color: var(--danger); font-weight: 800; }
+    .duplicate-message { margin: -4px 0 12px; color: var(--primary-dark); font-size: 0.95rem; line-height: 1.55; }
+
+    .empty-state {
+      display: grid;
+      min-height: 260px;
+      place-items: center;
+      padding: 20px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+      background: #fbfdff;
+    }
+
+    .group-list { display: grid; gap: 12px; }
+    .group-card { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: #fbfdff; }
+    .group-card h3 { margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--primary-dark); font-size: 1rem; background: var(--primary-soft); }
+    .group-card ul { display: grid; gap: 8px; margin: 0; padding: 12px 14px 12px 32px; }
+    .group-card li { overflow-wrap: anywhere; line-height: 1.5; }
+
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+      textarea { min-height: 220px; }
+    }
+
+    @media (max-width: 540px) {
+      main { width: min(100% - 24px, 680px); padding-top: 20px; }
+      header { margin: 28px 0 24px; }
+      .panel { padding: 16px; }
+      .setting-grid, .actions { grid-template-columns: 1fr; display: grid; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="back-link" href="../">← 웹앱 모음으로 돌아가기</a>
+    <header>
+      <h1>모둠 자동 배정</h1>
+      <p class="intro">학생을 원하는 모둠 수 또는 모둠당 인원에 맞게 무작위로 배정합니다.</p>
+    </header>
+
+    <div class="workspace" aria-label="모둠 자동 배정 도구">
+      <section class="panel" aria-labelledby="inputTitle">
+        <h2 id="inputTitle">학생과 배정 방식 설정</h2>
+        <label for="studentNames">학생 이름</label>
+        <textarea id="studentNames" aria-describedby="studentNamesHint" aria-invalid="false" placeholder="예:&#10;김민준&#10;이서연, 박지호&#10;최하은"></textarea>
+        <p class="hint" id="studentNamesHint">학생 이름은 한 줄에 한 명씩 또는 쉼표로 구분해 입력할 수 있습니다. 빈 줄과 앞뒤 공백은 자동으로 무시되며, 같은 이름도 각각 별도의 학생으로 처리합니다.</p>
+        <span class="count" id="studentCount" aria-live="polite" aria-atomic="true">현재 0명</span>
+
+        <fieldset aria-describedby="assignmentModeHint">
+          <legend>배정 방식</legend>
+          <p class="hint" id="assignmentModeHint">한 가지 방식을 선택한 뒤, 활성화된 숫자 입력란에 2 이상을 입력해 주세요.</p>
+          <div class="mode-options">
+            <label class="mode-option" for="groupCountMode">
+              <input id="groupCountMode" name="assignmentMode" type="radio" value="group-count" checked>
+              모둠 수를 기준으로 배정
+            </label>
+            <label class="mode-option" for="membersPerGroupMode">
+              <input id="membersPerGroupMode" name="assignmentMode" type="radio" value="members-per-group">
+              모둠당 인원을 기준으로 배정
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="setting-grid">
+          <div class="setting-field" id="groupCountField">
+            <label for="groupCount">모둠 수</label>
+            <input id="groupCount" type="number" inputmode="numeric" min="2" step="1" aria-describedby="groupCountHint" aria-invalid="false" placeholder="예: 4">
+            <p class="hint" id="groupCountHint">만들 모둠의 개수</p>
+          </div>
+          <div class="setting-field disabled" id="membersPerGroupField">
+            <label for="membersPerGroup">모둠당 인원</label>
+            <input id="membersPerGroup" type="number" inputmode="numeric" min="2" step="1" aria-describedby="membersPerGroupHint" aria-invalid="false" placeholder="예: 4" disabled>
+            <p class="hint" id="membersPerGroupHint">한 모둠에 들어갈 기준 인원</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="sampleButton" type="button" aria-label="예시 학생 명단 입력">예시 입력</button>
+          <button class="primary" id="makeGroupsButton" type="button" aria-label="현재 설정으로 모둠 만들기">모둠 만들기</button>
+          <button class="secondary" id="reshuffleButton" type="button" aria-label="현재 설정으로 모둠 다시 섞기">다시 섞기</button>
+          <button class="secondary" id="copyButton" type="button" aria-label="모둠 배정 결과 복사">결과 복사</button>
+          <button class="ghost" id="clearButton" type="button" aria-label="입력과 모둠 배정 결과 초기화">초기화</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="resultTitle">
+        <div class="result-header">
+          <h2 id="resultTitle">모둠 배정 결과</h2>
+        </div>
+        <p class="message" id="statusMessage" role="status" aria-live="polite" aria-atomic="true">학생 이름과 배정 방식을 설정한 뒤 모둠을 만들어 보세요.</p>
+        <p class="message error" id="errorMessage" role="alert" hidden></p>
+        <p class="duplicate-message" id="duplicateMessage" hidden></p>
+        <div id="resultArea" class="empty-state" role="region" aria-labelledby="resultTitle" tabindex="-1">아직 만들어진 모둠이 없습니다.</div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const studentNames = document.querySelector("#studentNames");
+    const groupCountMode = document.querySelector("#groupCountMode");
+    const membersPerGroupMode = document.querySelector("#membersPerGroupMode");
+    const groupCount = document.querySelector("#groupCount");
+    const membersPerGroup = document.querySelector("#membersPerGroup");
+    const groupCountField = document.querySelector("#groupCountField");
+    const membersPerGroupField = document.querySelector("#membersPerGroupField");
+    const studentCount = document.querySelector("#studentCount");
+    const sampleButton = document.querySelector("#sampleButton");
+    const makeGroupsButton = document.querySelector("#makeGroupsButton");
+    const reshuffleButton = document.querySelector("#reshuffleButton");
+    const copyButton = document.querySelector("#copyButton");
+    const clearButton = document.querySelector("#clearButton");
+    const statusMessage = document.querySelector("#statusMessage");
+    const errorMessage = document.querySelector("#errorMessage");
+    const duplicateMessage = document.querySelector("#duplicateMessage");
+    const resultArea = document.querySelector("#resultArea");
+
+    const sampleNames = ["김민준", "이서연", "박지호", "최하은", "정도윤", "강지민", "윤서아", "한유준", "서지후", "임가은"];
+    let lastSettings = null;
+    let lastGroups = null;
+
+    function parseNames(value) {
+      return value.split(/[\n,]+/).map((name) => name.trim()).filter(Boolean);
+    }
+
+    function shuffle(items) {
+      const copied = [...items];
+
+      for (let index = copied.length - 1; index > 0; index -= 1) {
+        const randomIndex = Math.floor(Math.random() * (index + 1));
+        [copied[index], copied[randomIndex]] = [copied[randomIndex], copied[index]];
+      }
+
+      return copied;
+    }
+
+    function findDuplicateNames(names) {
+      const counts = new Map();
+      names.forEach((name) => counts.set(name, (counts.get(name) || 0) + 1));
+      return [...counts.entries()].filter(([, count]) => count > 1);
+    }
+
+    function updateCount() {
+      studentCount.textContent = `현재 ${parseNames(studentNames.value).length}명`;
+    }
+
+    function clearError() {
+      errorMessage.textContent = "";
+      errorMessage.hidden = true;
+      [studentNames, groupCountMode, membersPerGroupMode, groupCount, membersPerGroup].forEach((input) => input.setAttribute("aria-invalid", "false"));
+    }
+
+    function clearDuplicateNotice() {
+      duplicateMessage.textContent = "";
+      duplicateMessage.hidden = true;
+    }
+
+    function renderEmpty(text) {
+      resultArea.className = "empty-state";
+      resultArea.textContent = text;
+    }
+
+    function showError(text, input) {
+      statusMessage.textContent = "";
+      errorMessage.textContent = text;
+      errorMessage.hidden = false;
+      clearDuplicateNotice();
+      if (input) {
+        input.setAttribute("aria-invalid", "true");
+        input.focus();
+      }
+    }
+
+    function updateModeControls() {
+      const isGroupCountMode = groupCountMode.checked;
+      groupCount.disabled = !isGroupCountMode;
+      membersPerGroup.disabled = isGroupCountMode;
+      groupCountField.classList.toggle("disabled", !isGroupCountMode);
+      membersPerGroupField.classList.toggle("disabled", isGroupCountMode);
+      clearError();
+    }
+
+    function getPositiveInteger(input, label) {
+      const value = input.value.trim();
+
+      if (value === "") {
+        showError(`${label}를 입력해 주세요.`, input);
+        return null;
+      }
+
+      const number = Number(value);
+      if (!Number.isInteger(number) || number <= 0) {
+        showError(`${label}는 1 이상의 정수로 입력해 주세요.`, input);
+        return null;
+      }
+
+      return number;
+    }
+
+    function validateSettings() {
+      const names = parseNames(studentNames.value);
+      updateCount();
+
+      if (names.length === 0) {
+        showError("학생 이름을 2명 이상 입력해 주세요.", studentNames);
+        return null;
+      }
+
+      if (names.length === 1) {
+        showError("모둠을 만들려면 학생 이름이 2명 이상 필요합니다.", studentNames);
+        return null;
+      }
+
+      const selectedMode = document.querySelector('input[name="assignmentMode"]:checked');
+      if (!selectedMode) {
+        showError("모둠 수 기준 또는 모둠당 인원 기준 중 하나를 선택해 주세요.", groupCountMode);
+        return null;
+      }
+
+      if (selectedMode.value === "group-count") {
+        const numberOfGroups = getPositiveInteger(groupCount, "모둠 수");
+        if (numberOfGroups === null) return null;
+        if (numberOfGroups < 2) {
+          showError("모둠 수는 2 이상으로 입력해 주세요.", groupCount);
+          return null;
+        }
+        if (numberOfGroups > names.length) {
+          showError("모둠 수는 학생 수보다 클 수 없습니다.", groupCount);
+          return null;
+        }
+        if (numberOfGroups === names.length) {
+          showError("모든 모둠이 1명이 되지 않도록 모둠 수를 학생 수보다 적게 입력해 주세요.", groupCount);
+          return null;
+        }
+        return { names, numberOfGroups, mode: selectedMode.value };
+      }
+
+      const peoplePerGroup = getPositiveInteger(membersPerGroup, "모둠당 인원");
+      if (peoplePerGroup === null) return null;
+      if (peoplePerGroup < 2) {
+        showError("모둠당 인원은 2 이상으로 입력해 주세요.", membersPerGroup);
+        return null;
+      }
+      if (peoplePerGroup >= names.length) {
+        showError("모둠당 인원은 전체 학생 수보다 작게 입력해 2개 이상의 모둠을 만들어 주세요.", membersPerGroup);
+        return null;
+      }
+
+      return { names, numberOfGroups: Math.ceil(names.length / peoplePerGroup), mode: selectedMode.value };
+    }
+
+    function makeBalancedGroups(names, numberOfGroups) {
+      const students = names.map((name, index) => ({ name, index }));
+      const shuffledStudents = shuffle(students);
+      const baseSize = Math.floor(students.length / numberOfGroups);
+      const extraStudents = students.length % numberOfGroups;
+      const groups = [];
+      let startIndex = 0;
+
+      for (let index = 0; index < numberOfGroups; index += 1) {
+        const groupSize = baseSize + (index < extraStudents ? 1 : 0);
+        groups.push(shuffledStudents.slice(startIndex, startIndex + groupSize));
+        startIndex += groupSize;
+      }
+
+      return groups;
+    }
+
+    function hasValidAssignment(groups, studentTotal) {
+      const assignedIndexes = groups.flat().map((student) => student.index);
+      return assignedIndexes.length === studentTotal && new Set(assignedIndexes).size === studentTotal;
+    }
+
+    function renderGroups(groups) {
+      const groupList = document.createElement("div");
+      groupList.className = "group-list";
+
+      groups.forEach((group, index) => {
+        const card = document.createElement("section");
+        const heading = document.createElement("h3");
+        const list = document.createElement("ul");
+        heading.textContent = `${index + 1}모둠 (${group.length}명)`;
+
+        group.forEach((student) => {
+          const item = document.createElement("li");
+          item.textContent = student.name;
+          list.append(item);
+        });
+
+        card.className = "group-card";
+        card.append(heading, list);
+        groupList.append(card);
+      });
+
+      resultArea.className = "";
+      resultArea.replaceChildren(groupList);
+    }
+
+    function createGroups(settings) {
+      const groups = makeBalancedGroups(settings.names, settings.numberOfGroups);
+
+      if (!hasValidAssignment(groups, settings.names.length)) {
+        showError("학생 배정 확인 중 문제가 발생했습니다. 다시 시도해 주세요.", makeGroupsButton);
+        return false;
+      }
+
+      clearError();
+      lastSettings = { ...settings, names: [...settings.names] };
+      lastGroups = groups;
+      const duplicates = findDuplicateNames(settings.names);
+      statusMessage.textContent = `총 ${settings.names.length}명을 ${settings.numberOfGroups}개 모둠으로 배정했습니다.`;
+      duplicateMessage.textContent = duplicates.length > 0
+        ? `같은 이름이 포함되어 있습니다: ${duplicates.map(([name, count]) => `${name}(${count}명)`).join(", ")}. 각각 별도의 학생으로 처리했습니다.`
+        : "";
+      duplicateMessage.hidden = duplicates.length === 0;
+      renderGroups(groups);
+      resultArea.focus();
+      return true;
+    }
+
+    function makeGroups() {
+      clearError();
+      clearDuplicateNotice();
+      const settings = validateSettings();
+      if (settings) createGroups(settings);
+    }
+
+    function reshuffleGroups() {
+      if (!lastSettings) {
+        showError("먼저 모둠을 만든 뒤 다시 섞어 주세요.", makeGroupsButton);
+        return;
+      }
+      clearError();
+      clearDuplicateNotice();
+      createGroups(lastSettings);
+    }
+
+    async function copyResults() {
+      if (!lastGroups) {
+        showError("먼저 모둠을 만든 뒤 결과를 복사해 주세요.", makeGroupsButton);
+        return;
+      }
+
+      const text = lastGroups.map((group, index) => `${index + 1}모둠 (${group.length}명)\n${group.map((student) => student.name).join("\n")}`).join("\n\n");
+
+      try {
+        await navigator.clipboard.writeText(text);
+        clearError();
+        statusMessage.textContent = "모둠 배정 결과를 클립보드에 복사했습니다.";
+      } catch (error) {
+        showError("결과를 복사하지 못했습니다. 브라우저의 클립보드 권한을 확인해 주세요.", copyButton);
+      }
+    }
+
+    function resetApp() {
+      studentNames.value = "";
+      groupCount.value = "";
+      membersPerGroup.value = "";
+      groupCountMode.checked = true;
+      updateModeControls();
+      updateCount();
+      lastSettings = null;
+      lastGroups = null;
+      clearError();
+      clearDuplicateNotice();
+      statusMessage.textContent = "학생 이름과 배정 방식을 설정한 뒤 모둠을 만들어 보세요.";
+      renderEmpty("아직 만들어진 모둠이 없습니다.");
+      studentNames.focus();
+    }
+
+    studentNames.addEventListener("input", () => {
+      updateCount();
+      clearError();
+    });
+    groupCountMode.addEventListener("change", updateModeControls);
+    membersPerGroupMode.addEventListener("change", updateModeControls);
+    groupCount.addEventListener("input", clearError);
+    membersPerGroup.addEventListener("input", clearError);
+    sampleButton.addEventListener("click", () => {
+      studentNames.value = sampleNames.join("\n");
+      updateCount();
+      clearError();
+      clearDuplicateNotice();
+      statusMessage.textContent = "예시 학생 명단을 넣었습니다. 배정 방식을 설정한 뒤 모둠을 만들어 보세요.";
+      renderEmpty("아직 만들어진 모둠이 없습니다.");
+      studentNames.focus();
+    });
+    makeGroupsButton.addEventListener("click", makeGroups);
+    reshuffleButton.addEventListener("click", reshuffleGroups);
+    copyButton.addEventListener("click", copyResults);
+    clearButton.addEventListener("click", resetApp);
+    updateCount();
+    updateModeControls();
+  </script>
+</body>
+</html>
