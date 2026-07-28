@@ -96,7 +96,7 @@
     form { display: grid; gap: 14px; }
     label { font-weight: 800; }
 
-    input {
+    input, select {
       width: 100%;
       min-height: 48px;
       padding: 0 14px;
@@ -108,7 +108,7 @@
       outline: none;
     }
 
-    input:focus, button:focus-visible, .back-link:focus-visible {
+    input:focus, select:focus, button:focus-visible, .back-link:focus-visible {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
@@ -138,6 +138,19 @@
     .message.error { color: var(--danger); font-weight: 800; }
     .logged-in-email { margin: 8px 0 20px; overflow-wrap: anywhere; color: var(--primary-dark); font-weight: 800; }
     .privacy-note { margin-top: 22px; font-size: 0.92rem; }
+    .roster-management { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .roster-management h3 { margin: 0 0 14px; font-size: 1.12rem; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .form-grid .full-width { grid-column: 1 / -1; }
+    .roster-list-section { margin-top: 30px; }
+    .list-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .list-header button { min-height: 40px; flex: 0 0 auto; }
+    .roster-list { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; }
+    .roster-item { padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #fbfdff; }
+    .roster-name { margin: 0 0 6px; overflow-wrap: anywhere; font-weight: 800; }
+    .roster-detail { color: var(--muted); font-size: 0.95rem; line-height: 1.55; }
+    .default-badge { display: inline-block; margin-top: 8px; padding: 4px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-dark); font-size: 0.85rem; font-weight: 800; }
+    .empty-state { margin-top: 14px; padding: 18px; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); text-align: center; line-height: 1.6; background: #fbfdff; }
 
     [hidden] { display: none !important; }
 
@@ -146,6 +159,9 @@
       header { margin: 28px 0 24px; }
       .panel { padding: 18px; }
       button { width: 100%; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid .full-width { grid-column: auto; }
+      .list-header { align-items: stretch; flex-direction: column; }
     }
   </style>
 </head>
@@ -181,10 +197,57 @@
         <h2>로그인되었습니다</h2>
         <p class="hint">로그인한 이메일</p>
         <p class="logged-in-email" id="userEmail"></p>
-        <p class="hint">학급 명단 관리 기능을 준비하고 있습니다.</p>
         <button class="secondary" id="signOutButton" type="button">로그아웃</button>
         <p class="message" id="signedInMessage" role="status" aria-live="polite" aria-atomic="true"></p>
         <p class="message error" id="signOutError" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
+
+        <section class="roster-management" id="rosterManagement" aria-labelledby="rosterManagementTitle">
+          <h3 id="rosterManagementTitle">학급 명단 관리</h3>
+          <form id="rosterForm" novalidate>
+            <div class="form-grid">
+              <div class="full-width">
+                <label for="rosterName">명단 이름</label>
+                <input id="rosterName" name="rosterName" type="text" autocomplete="off" placeholder="예: 2026학년도 6학년 1반" aria-describedby="rosterNameHint rosterFormError" aria-invalid="false" required>
+                <p class="hint" id="rosterNameHint">예: 2026학년도 6학년 1반</p>
+              </div>
+              <div>
+                <label for="schoolYear">학년도</label>
+                <input id="schoolYear" name="schoolYear" type="number" min="2000" max="2100" step="1" inputmode="numeric" aria-describedby="schoolYearHint rosterFormError" aria-invalid="false" required>
+                <p class="hint" id="schoolYearHint">2000~2100</p>
+              </div>
+              <div>
+                <label for="grade">학년</label>
+                <select id="grade" name="grade" aria-describedby="gradeHint rosterFormError" required>
+                  <option value="1">1학년</option>
+                  <option value="2">2학년</option>
+                  <option value="3">3학년</option>
+                  <option value="4">4학년</option>
+                  <option value="5">5학년</option>
+                  <option value="6">6학년</option>
+                </select>
+                <p class="hint" id="gradeHint">초등학교 1~6학년</p>
+              </div>
+              <div class="full-width">
+                <label for="className">반</label>
+                <input id="className" name="className" type="text" autocomplete="off" placeholder="예: 1반" aria-describedby="classNameHint rosterFormError" aria-invalid="false" required>
+                <p class="hint" id="classNameHint">예: 1반</p>
+              </div>
+            </div>
+            <button id="createRosterButton" type="submit">학급 만들기</button>
+          </form>
+          <p class="message" id="rosterFormMessage" role="status" aria-live="polite" aria-atomic="true"></p>
+          <p class="message error" id="rosterFormError" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
+
+          <section class="roster-list-section" aria-labelledby="rosterListTitle">
+            <div class="list-header">
+              <h3 id="rosterListTitle">저장된 학급</h3>
+              <button class="secondary" id="reloadRostersButton" type="button" hidden>목록 다시 불러오기</button>
+            </div>
+            <p class="message" id="rosterListMessage" role="status" aria-live="polite" aria-atomic="true"></p>
+            <p class="message error" id="rosterListError" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
+            <ul class="roster-list" id="rosterList" aria-describedby="rosterListMessage rosterListError"></ul>
+          </section>
+        </section>
         <p class="hint privacy-note">공용 컴퓨터에서는 사용을 마친 뒤 반드시 로그아웃해 주세요.</p>
       </div>
     </section>
@@ -194,6 +257,7 @@
   <script src="../shared/supabase-config.js"></script>
   <script src="../shared/supabase-client.js"></script>
   <script src="../shared/auth.js"></script>
+  <script src="../shared/roster-service.js"></script>
   <script>
     (() => {
       const checkingPanel = document.querySelector("#checkingPanel");
@@ -208,10 +272,29 @@
       const signOutButton = document.querySelector("#signOutButton");
       const signedInMessage = document.querySelector("#signedInMessage");
       const signOutError = document.querySelector("#signOutError");
+      const rosterManagement = document.querySelector("#rosterManagement");
+      const rosterForm = document.querySelector("#rosterForm");
+      const rosterNameInput = document.querySelector("#rosterName");
+      const schoolYearInput = document.querySelector("#schoolYear");
+      const gradeInput = document.querySelector("#grade");
+      const classNameInput = document.querySelector("#className");
+      const createRosterButton = document.querySelector("#createRosterButton");
+      const rosterFormMessage = document.querySelector("#rosterFormMessage");
+      const rosterFormError = document.querySelector("#rosterFormError");
+      const reloadRostersButton = document.querySelector("#reloadRostersButton");
+      const rosterListMessage = document.querySelector("#rosterListMessage");
+      const rosterListError = document.querySelector("#rosterListError");
+      const rosterList = document.querySelector("#rosterList");
       const defaultButtonText = "로그인 링크 받기";
+      const defaultCreateRosterText = "학급 만들기";
       let cooldownSeconds = 0;
       let cooldownTimer = null;
       let isSending = false;
+      let isCreatingRoster = false;
+      let currentSignedInEmail = null;
+      let rosterRequestVersion = 0;
+
+      schoolYearInput.value = String(new Date().getFullYear());
 
       function clearSignedOutMessages() {
         authMessage.textContent = "";
@@ -221,6 +304,8 @@
       }
 
       function showSignedOut() {
+        currentSignedInEmail = null;
+        clearRosterView();
         checkingPanel.hidden = true;
         signedInPanel.hidden = true;
         signedOutPanel.hidden = false;
@@ -231,10 +316,19 @@
       }
 
       function showSignedIn(email) {
+        const nextEmail = email || "";
+        const isSameSession = currentSignedInEmail === nextEmail && !signedInPanel.hidden;
+        currentSignedInEmail = nextEmail;
         checkingPanel.hidden = true;
         signedOutPanel.hidden = true;
         signedInPanel.hidden = false;
-        userEmail.textContent = email || "이메일 정보를 확인할 수 없습니다.";
+        userEmail.textContent = nextEmail || "이메일 정보를 확인할 수 없습니다.";
+        rosterManagement.hidden = false;
+
+        if (!isSameSession) {
+          clearRosterView();
+          loadRosters();
+        }
       }
 
       function showSignedOutError(message) {
@@ -278,6 +372,111 @@
         }, 1000);
       }
 
+      function clearRosterFormMessages() {
+        rosterFormMessage.textContent = "";
+        rosterFormError.textContent = "";
+        rosterFormError.hidden = true;
+        [rosterNameInput, schoolYearInput, gradeInput, classNameInput].forEach((input) => input.setAttribute("aria-invalid", "false"));
+      }
+
+      function clearRosterView() {
+        rosterRequestVersion += 1;
+        rosterList.replaceChildren();
+        rosterListMessage.textContent = "";
+        rosterListError.textContent = "";
+        rosterListError.hidden = true;
+        reloadRostersButton.hidden = true;
+        rosterManagement.hidden = true;
+      }
+
+      function renderRosters(rosters) {
+        rosterList.replaceChildren();
+
+        if (rosters.length === 0) {
+          const emptyItem = document.createElement("li");
+          emptyItem.className = "empty-state";
+          emptyItem.textContent = "아직 저장된 학급이 없습니다.";
+          rosterList.append(emptyItem);
+          return;
+        }
+
+        rosters.forEach((roster) => {
+          const item = document.createElement("li");
+          const name = document.createElement("p");
+          const detail = document.createElement("p");
+          item.className = "roster-item";
+          name.className = "roster-name";
+          detail.className = "roster-detail";
+          name.textContent = roster.roster_name;
+          detail.textContent = `${roster.school_year}학년도 · ${roster.grade}학년 · ${roster.class_name}`;
+          item.append(name, detail);
+
+          if (roster.is_default) {
+            const badge = document.createElement("span");
+            badge.className = "default-badge";
+            badge.textContent = "기본 학급";
+            item.append(badge);
+          }
+
+          rosterList.append(item);
+        });
+      }
+
+      async function loadRosters() {
+        if (!currentSignedInEmail) return;
+
+        const requestVersion = ++rosterRequestVersion;
+        rosterList.replaceChildren();
+        rosterListMessage.textContent = "학급 목록을 불러오고 있습니다.";
+        rosterListError.textContent = "";
+        rosterListError.hidden = true;
+        reloadRostersButton.hidden = true;
+
+        try {
+          const rosters = await window.kwonClassRosterService.listRosters();
+          if (requestVersion !== rosterRequestVersion || !currentSignedInEmail) return;
+          rosterListMessage.textContent = "";
+          renderRosters(rosters);
+        } catch (error) {
+          if (requestVersion !== rosterRequestVersion || !currentSignedInEmail) return;
+          rosterListMessage.textContent = "";
+          rosterListError.textContent = error.message;
+          rosterListError.hidden = false;
+          reloadRostersButton.hidden = false;
+        }
+      }
+
+      function validateRosterForm() {
+        clearRosterFormMessages();
+        const rosterName = rosterNameInput.value.trim();
+        const className = classNameInput.value.trim();
+        const schoolYear = Number(schoolYearInput.value);
+        const grade = Number(gradeInput.value);
+
+        if (!rosterName) {
+          rosterNameInput.setAttribute("aria-invalid", "true");
+          rosterNameInput.focus();
+          throw new Error("명단 이름을 입력해 주세요.");
+        }
+        if (!Number.isInteger(schoolYear) || schoolYear < 2000 || schoolYear > 2100) {
+          schoolYearInput.setAttribute("aria-invalid", "true");
+          schoolYearInput.focus();
+          throw new Error("학년도는 2000부터 2100까지의 정수로 입력해 주세요.");
+        }
+        if (!Number.isInteger(grade) || grade < 1 || grade > 6) {
+          gradeInput.setAttribute("aria-invalid", "true");
+          gradeInput.focus();
+          throw new Error("학년은 1학년부터 6학년까지 선택해 주세요.");
+        }
+        if (!className) {
+          classNameInput.setAttribute("aria-invalid", "true");
+          classNameInput.focus();
+          throw new Error("반 이름을 입력해 주세요.");
+        }
+
+        return { rosterName, schoolYear, grade, className, isDefault: false };
+      }
+
       async function checkCurrentUser() {
         try {
           const user = await window.kwonClassAuth.getCurrentUser();
@@ -312,6 +511,47 @@
           updateSendButton();
         }
       });
+
+      rosterForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (isCreatingRoster || !currentSignedInEmail) return;
+        const submittingEmail = currentSignedInEmail;
+
+        let roster;
+        try {
+          roster = validateRosterForm();
+        } catch (error) {
+          rosterFormError.textContent = error.message;
+          rosterFormError.hidden = false;
+          return;
+        }
+
+        isCreatingRoster = true;
+        createRosterButton.disabled = true;
+        createRosterButton.textContent = "저장 중...";
+        rosterFormMessage.textContent = "학급을 저장하고 있습니다.";
+
+        try {
+          await window.kwonClassRosterService.createRoster(roster);
+          if (currentSignedInEmail !== submittingEmail) return;
+          rosterNameInput.value = "";
+          classNameInput.value = "";
+          gradeInput.value = "1";
+          rosterFormMessage.textContent = "학급이 저장되었습니다.";
+          rosterNameInput.focus();
+          await loadRosters();
+        } catch (error) {
+          rosterFormMessage.textContent = "";
+          rosterFormError.textContent = error.message;
+          rosterFormError.hidden = false;
+        } finally {
+          isCreatingRoster = false;
+          createRosterButton.disabled = false;
+          createRosterButton.textContent = defaultCreateRosterText;
+        }
+      });
+
+      reloadRostersButton.addEventListener("click", loadRosters);
 
       signOutButton.addEventListener("click", async () => {
         signOutError.textContent = "";
