@@ -95,6 +95,11 @@
     .shared-roster .actions { margin-top: 12px; }
     .account-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--primary-dark); font-weight: 800; }
     .account-link:hover, .account-link:focus-visible { text-decoration: underline; }
+    .gender-option { margin: 0 0 18px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--soft-bg); }
+    .gender-option label { display: flex; align-items: flex-start; gap: 10px; margin: 0; font-size: 1rem; }
+    .gender-option input { flex: 0 0 auto; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--primary); }
+    .gender-option input:disabled { cursor: not-allowed; }
+    .gender-option .hint { margin: 10px 0 0; }
 
     button {
       min-height: 44px;
@@ -184,6 +189,15 @@
           <p class="message" id="sharedRosterStatus" role="status" aria-live="polite" aria-atomic="true">로그인 상태를 확인하고 있습니다.</p>
         </section>
 
+        <section class="gender-option" aria-labelledby="genderBalanceTitle">
+          <label for="genderBalanceOption" id="genderBalanceTitle">
+            <input id="genderBalanceOption" type="checkbox" disabled aria-describedby="genderBalanceHint">
+            성별을 고려해 발표 순서를 고르게 구성
+          </label>
+          <p class="hint" id="genderBalanceHint">공통 학급 명단의 남·여 정보를 이용해 발표 순서에 가능한 고르게 배치합니다. 성별 미입력 학생은 전체 순서에 함께 섞입니다.</p>
+          <p class="message" id="genderBalanceStatus" role="status" aria-live="polite" aria-atomic="true">성별 고려 기능은 공통 학급 명단을 불러온 경우에 사용할 수 있습니다.</p>
+        </section>
+
         <div class="actions">
           <button class="primary" id="shuffleButton" type="button">발표 순서 뽑기</button>
           <button class="secondary" id="sampleButton" type="button">예시 입력</button>
@@ -219,6 +233,8 @@
     const resultArea = document.querySelector("#resultArea");
     const loadDefaultRosterButton = document.querySelector("#loadDefaultRosterButton");
     const sharedRosterStatus = document.querySelector("#sharedRosterStatus");
+    const genderBalanceOption = document.querySelector("#genderBalanceOption");
+    const genderBalanceStatus = document.querySelector("#genderBalanceStatus");
 
     const sampleNames = ["김민준", "이서연", "박지호", "최하은", "정도윤", "강지민", "윤서아", "한유준"];
     let hasPresentationOrder = false;
@@ -226,6 +242,9 @@
     let commonRosterRequestVersion = 0;
     let isCommonRosterLoading = false;
     let isCommonRosterSignedIn = false;
+    let loadedRosterStudents = [];
+    let loadedRosterText = "";
+    let genderConnectionWasModified = false;
 
     function parseNames(value) {
       return value.split(/[\n,]+/).map((name) => name.trim()).filter(Boolean);
@@ -244,6 +263,42 @@
 
     function updateCount() {
       studentCount.textContent = `${parseNames(studentNames.value).length}명`;
+    }
+
+    function normalizeGenderCode(value) {
+      return value === "male" || value === "female" || value === "unspecified" ? value : "unspecified";
+    }
+
+    function updateGenderBalanceAvailability() {
+      const hasLoadedRoster = loadedRosterStudents.length > 0 && studentNames.value === loadedRosterText;
+      const hasMaleStudent = loadedRosterStudents.some((student) => student.genderCode === "male");
+      const hasFemaleStudent = loadedRosterStudents.some((student) => student.genderCode === "female");
+
+      if (!hasLoadedRoster) {
+        genderBalanceOption.checked = false;
+        genderBalanceOption.disabled = true;
+        genderBalanceStatus.textContent = genderConnectionWasModified
+          ? "학생 이름이나 순서를 수정하여 성별 연결이 해제되었습니다. 기본 학급 명단을 다시 불러와 주세요."
+          : "성별 고려 기능은 공통 학급 명단을 불러온 경우에 사용할 수 있습니다.";
+        return;
+      }
+
+      if (!hasMaleStudent || !hasFemaleStudent) {
+        genderBalanceOption.checked = false;
+        genderBalanceOption.disabled = true;
+        genderBalanceStatus.textContent = "남·여 정보가 모두 입력된 학급에서 사용할 수 있습니다.";
+        return;
+      }
+
+      genderBalanceOption.disabled = false;
+      genderBalanceStatus.textContent = "성별 고려 기능을 사용할 수 있습니다. 결과에는 성별 정보가 표시되지 않습니다.";
+    }
+
+    function clearGenderRosterConnection(wasModified = false) {
+      loadedRosterStudents = [];
+      loadedRosterText = "";
+      genderConnectionWasModified = wasModified;
+      updateGenderBalanceAvailability();
     }
 
     function updateCommonRosterButton() {
@@ -347,23 +402,30 @@
           return;
         }
 
-        const rosterStudentNames = (
+        const rosterStudents = (
           await window.kwonClassRosterService.listStudents(defaultRoster.id, {
             includeInactive: false
           })
-        ).map(({ display_name }) => display_name);
+        ).map(({ display_name, gender_code }) => ({
+          displayName: display_name,
+          genderCode: normalizeGenderCode(gender_code)
+        }));
         if (!isCurrentCommonRosterRequest(requestVersion, authVersion)) return;
 
-        if (rosterStudentNames.length === 0) {
+        if (rosterStudents.length === 0) {
           showCommonRosterStatus("기본 학급에 저장된 학생이 없습니다.");
           return;
         }
 
-        studentNames.value = rosterStudentNames.join("\n");
+        loadedRosterStudents = rosterStudents;
+        loadedRosterText = rosterStudents.map((student) => student.displayName).join("\n");
+        genderConnectionWasModified = false;
+        studentNames.value = loadedRosterText;
         updateCount();
+        updateGenderBalanceAvailability();
         clearError();
         clearPresentationOrderForNameChange();
-        showCommonRosterStatus(`기본 학급에서 학생 ${rosterStudentNames.length}명의 이름을 불러왔습니다.`);
+        showCommonRosterStatus(`기본 학급에서 학생 ${rosterStudents.length}명의 이름을 불러왔습니다.`);
       } catch (error) {
         if (!isCurrentCommonRosterRequest(requestVersion, authVersion)) return;
         showCommonRosterStatus(getCommonRosterErrorMessage(error));
@@ -421,6 +483,77 @@
       resultArea.replaceChildren(list);
     }
 
+    function createGenderBalancedOrder() {
+      const students = loadedRosterStudents.map((student, index) => ({
+        id: index,
+        name: student.displayName,
+        genderCode: student.genderCode
+      }));
+      const maleStudents = shuffle(students.filter((student) => student.genderCode === "male"));
+      const femaleStudents = shuffle(students.filter((student) => student.genderCode === "female"));
+      const unspecifiedStudents = shuffle(students.filter((student) => student.genderCode === "unspecified"));
+      const genderedStudents = [];
+      let maleIndex = 0;
+      let femaleIndex = 0;
+      let lastGenderCode = "";
+
+      // 각 순번의 이상적인 누적 비율보다 더 뒤처진 성별을 먼저 배치합니다.
+      while (maleIndex < maleStudents.length || femaleIndex < femaleStudents.length) {
+        if (maleIndex >= maleStudents.length) {
+          genderedStudents.push(femaleStudents[femaleIndex]);
+          femaleIndex += 1;
+          continue;
+        }
+        if (femaleIndex >= femaleStudents.length) {
+          genderedStudents.push(maleStudents[maleIndex]);
+          maleIndex += 1;
+          continue;
+        }
+
+        const nextPosition = genderedStudents.length + 1;
+        const totalGendered = maleStudents.length + femaleStudents.length;
+        const maleDeficit = (nextPosition * maleStudents.length / totalGendered) - maleIndex;
+        const femaleDeficit = (nextPosition * femaleStudents.length / totalGendered) - femaleIndex;
+        const equalGenderCounts = maleStudents.length === femaleStudents.length;
+        const chooseMale = equalGenderCounts && lastGenderCode
+          ? lastGenderCode !== "male"
+          : Math.abs(maleDeficit - femaleDeficit) < Number.EPSILON
+            ? Math.random() < 0.5
+            : maleDeficit > femaleDeficit;
+
+        if (chooseMale) {
+          genderedStudents.push(maleStudents[maleIndex]);
+          maleIndex += 1;
+          lastGenderCode = "male";
+        } else {
+          genderedStudents.push(femaleStudents[femaleIndex]);
+          femaleIndex += 1;
+          lastGenderCode = "female";
+        }
+      }
+
+      const gaps = Array.from({ length: genderedStudents.length + 1 }, () => []);
+      const startGap = gaps.length > 0 ? Math.floor(Math.random() * gaps.length) : 0;
+      unspecifiedStudents.forEach((student, index) => {
+        gaps[(startGap + index) % gaps.length].push(student);
+      });
+
+      const orderedStudents = [];
+      gaps.forEach((gap, index) => {
+        orderedStudents.push(...gap);
+        if (index < genderedStudents.length) {
+          orderedStudents.push(genderedStudents[index]);
+        }
+      });
+
+      const uniqueIds = new Set(orderedStudents.map((student) => student.id));
+      if (orderedStudents.length === 0 || orderedStudents.length !== students.length || uniqueIds.size !== students.length) {
+        throw new Error("발표 순서를 확인하지 못했습니다. 다시 시도해 주세요.");
+      }
+
+      return orderedStudents.map((student) => student.name);
+    }
+
     function drawPresentationOrder() {
       const names = parseNames(studentNames.value);
       updateCount();
@@ -435,14 +568,25 @@
         return;
       }
 
-      const orderedNames = shuffle(names);
+      let orderedNames;
+      const usesGenderBalance = !genderBalanceOption.disabled && genderBalanceOption.checked;
+
+      try {
+        orderedNames = usesGenderBalance ? createGenderBalancedOrder() : shuffle(names);
+      } catch (error) {
+        showError("발표 순서를 확인하지 못했습니다. 다시 시도해 주세요.");
+        return;
+      }
       const duplicates = findDuplicateNames(names);
       const duplicateNotice = duplicates.length > 0
         ? ` 같은 이름이 포함되어 있습니다: ${duplicates.map(([name, count]) => `${name}(${count}명)`).join(", ")}. 각각 별도의 학생으로 처리했습니다.`
         : "";
 
       clearError();
-      message.textContent = `총 ${orderedNames.length}명의 발표 순서가 생성되었습니다.${duplicateNotice}`;
+      const genderBalanceNotice = usesGenderBalance
+        ? " 성별 정보가 입력된 학생을 발표 순서에 가능한 고르게 배치했습니다."
+        : "";
+      message.textContent = `총 ${orderedNames.length}명의 발표 순서가 생성되었습니다.${genderBalanceNotice}${duplicateNotice}`;
       hasPresentationOrder = true;
       renderOrder(orderedNames);
       resultArea.focus();
@@ -453,6 +597,7 @@
 
     sampleButton.addEventListener("click", () => {
       invalidateCommonRosterRequest();
+      clearGenderRosterConnection();
       studentNames.value = sampleNames.join("\n");
       updateCount();
       clearError();
@@ -464,6 +609,7 @@
 
     clearButton.addEventListener("click", () => {
       invalidateCommonRosterRequest();
+      clearGenderRosterConnection();
       studentNames.value = "";
       updateCount();
       clearError();
@@ -476,6 +622,9 @@
 
     studentNames.addEventListener("input", () => {
       if (isCommonRosterLoading) invalidateCommonRosterRequest();
+      if (loadedRosterStudents.length > 0 || loadedRosterText) {
+        clearGenderRosterConnection(true);
+      }
       updateCount();
       clearPresentationOrderForNameChange();
       clearError();
