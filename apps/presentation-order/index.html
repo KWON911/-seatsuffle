@@ -89,6 +89,12 @@
     textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14); }
     .hint { margin: 10px 0 18px; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .shared-roster { margin: 0 0 20px; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: #fbfdff; }
+    .shared-roster h3 { margin: 0 0 8px; color: var(--primary-dark); font-size: 1rem; }
+    .shared-roster p { margin: 0; }
+    .shared-roster .actions { margin-top: 12px; }
+    .account-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--primary-dark); font-weight: 800; }
+    .account-link:hover, .account-link:focus-visible { text-decoration: underline; }
 
     button {
       min-height: 44px;
@@ -167,6 +173,17 @@
         <label for="studentNames">학생 이름</label>
         <textarea id="studentNames" aria-describedby="studentNamesHint" aria-invalid="false" placeholder="예:&#10;김민준&#10;이서연&#10;박지호&#10;최하은"></textarea>
         <p class="hint" id="studentNamesHint">학생 이름은 한 줄에 한 명씩 또는 쉼표로 구분해 입력할 수 있습니다. 빈 줄은 자동으로 무시되며, 같은 이름을 여러 번 입력하면 각각 별도의 학생으로 처리됩니다.</p>
+
+        <section class="shared-roster" aria-labelledby="sharedRosterTitle">
+          <h3 id="sharedRosterTitle">공통 학급 명단</h3>
+          <p class="hint">계정에 저장한 기본 학급의 학생 이름을 불러올 수 있습니다. 로그인하지 않아도 아래 입력란에 직접 이름을 입력할 수 있습니다.</p>
+          <div class="actions">
+            <button class="secondary" id="loadDefaultRosterButton" type="button" aria-describedby="sharedRosterStatus">기본 학급 불러오기</button>
+            <a class="account-link" href="../../account/">계정 및 학급 명단 관리</a>
+          </div>
+          <p class="message" id="sharedRosterStatus" role="status" aria-live="polite" aria-atomic="true">로그인 상태를 확인하고 있습니다.</p>
+        </section>
+
         <div class="actions">
           <button class="primary" id="shuffleButton" type="button">발표 순서 뽑기</button>
           <button class="secondary" id="sampleButton" type="button">예시 입력</button>
@@ -186,6 +203,11 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../shared/supabase-config.js"></script>
+  <script src="../../shared/supabase-client.js"></script>
+  <script src="../../shared/auth.js"></script>
+  <script src="../../shared/roster-service.js"></script>
   <script>
     const studentNames = document.querySelector("#studentNames");
     const shuffleButton = document.querySelector("#shuffleButton");
@@ -195,8 +217,15 @@
     const message = document.querySelector("#message");
     const errorMessage = document.querySelector("#errorMessage");
     const resultArea = document.querySelector("#resultArea");
+    const loadDefaultRosterButton = document.querySelector("#loadDefaultRosterButton");
+    const sharedRosterStatus = document.querySelector("#sharedRosterStatus");
 
     const sampleNames = ["김민준", "이서연", "박지호", "최하은", "정도윤", "강지민", "윤서아", "한유준"];
+    let hasPresentationOrder = false;
+    let commonRosterAuthVersion = 0;
+    let commonRosterRequestVersion = 0;
+    let isCommonRosterLoading = false;
+    let isCommonRosterSignedIn = false;
 
     function parseNames(value) {
       return value.split(/[\n,]+/).map((name) => name.trim()).filter(Boolean);
@@ -215,6 +244,135 @@
 
     function updateCount() {
       studentCount.textContent = `${parseNames(studentNames.value).length}명`;
+    }
+
+    function updateCommonRosterButton() {
+      loadDefaultRosterButton.disabled = isCommonRosterLoading;
+      loadDefaultRosterButton.textContent = isCommonRosterLoading ? "불러오는 중..." : "기본 학급 불러오기";
+    }
+
+    function showCommonRosterStatus(text) {
+      sharedRosterStatus.textContent = text;
+    }
+
+    function restoreCommonRosterStatus() {
+      showCommonRosterStatus(
+        isCommonRosterSignedIn
+          ? "로그인되었습니다. 기본 학급 명단을 불러올 수 있습니다."
+          : "저장된 명단을 불러오려면 계정 페이지에서 로그인해 주세요."
+      );
+    }
+
+    function invalidateCommonRosterRequest() {
+      commonRosterRequestVersion += 1;
+      isCommonRosterLoading = false;
+      updateCommonRosterButton();
+    }
+
+    function isCurrentCommonRosterRequest(requestVersion, authVersion) {
+      return requestVersion === commonRosterRequestVersion && authVersion === commonRosterAuthVersion;
+    }
+
+    function clearPresentationOrderForNameChange() {
+      if (!hasPresentationOrder) return;
+
+      hasPresentationOrder = false;
+      message.textContent = "학생 이름이 바뀌어 이전 발표 순서 결과를 지웠습니다.";
+      renderEmpty("학생 이름이 바뀌었습니다. 발표 순서를 다시 뽑아 주세요.");
+    }
+
+    async function checkCommonRosterLogin() {
+      const authVersion = ++commonRosterAuthVersion;
+      invalidateCommonRosterRequest();
+
+      if (!window.kwonClassAuth) {
+        isCommonRosterSignedIn = false;
+        showCommonRosterStatus("저장된 명단 기능을 준비하지 못했습니다. 직접 이름을 입력해 사용할 수 있습니다.");
+        return;
+      }
+
+      try {
+        const user = await window.kwonClassAuth.getCurrentUser();
+        if (authVersion !== commonRosterAuthVersion) return;
+        isCommonRosterSignedIn = Boolean(user);
+        restoreCommonRosterStatus();
+      } catch (error) {
+        if (authVersion !== commonRosterAuthVersion) return;
+        isCommonRosterSignedIn = false;
+        showCommonRosterStatus("로그인 상태를 확인하지 못했습니다. 직접 이름을 입력해 사용할 수 있습니다.");
+      }
+    }
+
+    function getCommonRosterErrorMessage(error) {
+      const messageText = String(error?.message || "").trim();
+      return messageText || "기본 학급 명단을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    async function loadDefaultRoster() {
+      if (parseNames(studentNames.value).length > 0) {
+        const confirmed = window.confirm(
+          "현재 입력된 학생 이름을 기본 학급 명단으로 바꾸시겠습니까?\n작성 중인 이름과 발표 순서 결과는 사라집니다."
+        );
+        if (!confirmed) return;
+      }
+
+      if (!window.kwonClassAuth || !window.kwonClassRosterService) {
+        showCommonRosterStatus("저장된 명단 기능을 준비하지 못했습니다. 직접 이름을 입력해 사용할 수 있습니다.");
+        return;
+      }
+
+      const requestVersion = ++commonRosterRequestVersion;
+      const authVersion = commonRosterAuthVersion;
+      isCommonRosterLoading = true;
+      updateCommonRosterButton();
+      showCommonRosterStatus("기본 학급 명단을 불러오고 있습니다.");
+
+      try {
+        const user = await window.kwonClassAuth.getCurrentUser();
+        if (!isCurrentCommonRosterRequest(requestVersion, authVersion)) return;
+
+        if (!user) {
+          isCommonRosterSignedIn = false;
+          showCommonRosterStatus("로그인이 필요합니다. 계정 및 학급 명단 관리에서 로그인해 주세요.");
+          return;
+        }
+
+        isCommonRosterSignedIn = true;
+        const rosters = await window.kwonClassRosterService.listRosters();
+        if (!isCurrentCommonRosterRequest(requestVersion, authVersion)) return;
+
+        const defaultRoster = rosters.find((roster) => roster.is_default === true);
+        if (!defaultRoster) {
+          showCommonRosterStatus("기본 학급이 지정되어 있지 않습니다. 계정 및 학급 명단 관리에서 기본 학급을 지정해 주세요.");
+          return;
+        }
+
+        const rosterStudentNames = (
+          await window.kwonClassRosterService.listStudents(defaultRoster.id, {
+            includeInactive: false
+          })
+        ).map(({ display_name }) => display_name);
+        if (!isCurrentCommonRosterRequest(requestVersion, authVersion)) return;
+
+        if (rosterStudentNames.length === 0) {
+          showCommonRosterStatus("기본 학급에 저장된 학생이 없습니다.");
+          return;
+        }
+
+        studentNames.value = rosterStudentNames.join("\n");
+        updateCount();
+        clearError();
+        clearPresentationOrderForNameChange();
+        showCommonRosterStatus(`기본 학급에서 학생 ${rosterStudentNames.length}명의 이름을 불러왔습니다.`);
+      } catch (error) {
+        if (!isCurrentCommonRosterRequest(requestVersion, authVersion)) return;
+        showCommonRosterStatus(getCommonRosterErrorMessage(error));
+      } finally {
+        if (isCurrentCommonRosterRequest(requestVersion, authVersion)) {
+          isCommonRosterLoading = false;
+          updateCommonRosterButton();
+        }
+      }
     }
 
     function findDuplicateNames(names) {
@@ -239,6 +397,7 @@
       errorMessage.textContent = text;
       errorMessage.hidden = false;
       studentNames.setAttribute("aria-invalid", "true");
+      hasPresentationOrder = false;
       renderEmpty("아직 정해진 발표 순서가 없습니다.");
       studentNames.focus();
     }
@@ -284,34 +443,62 @@
 
       clearError();
       message.textContent = `총 ${orderedNames.length}명의 발표 순서가 생성되었습니다.${duplicateNotice}`;
+      hasPresentationOrder = true;
       renderOrder(orderedNames);
       resultArea.focus();
     }
 
     shuffleButton.addEventListener("click", drawPresentationOrder);
+    loadDefaultRosterButton.addEventListener("click", loadDefaultRoster);
 
     sampleButton.addEventListener("click", () => {
+      invalidateCommonRosterRequest();
       studentNames.value = sampleNames.join("\n");
       updateCount();
       clearError();
+      hasPresentationOrder = false;
       message.textContent = "예시 이름을 넣었습니다. 발표 순서를 뽑아보세요.";
       renderEmpty("아직 정해진 발표 순서가 없습니다.");
       studentNames.focus();
     });
 
     clearButton.addEventListener("click", () => {
+      invalidateCommonRosterRequest();
       studentNames.value = "";
       updateCount();
       clearError();
+      hasPresentationOrder = false;
       message.textContent = "이름을 입력한 뒤 발표 순서를 뽑아보세요.";
       renderEmpty("아직 정해진 발표 순서가 없습니다.");
+      restoreCommonRosterStatus();
       studentNames.focus();
     });
 
     studentNames.addEventListener("input", () => {
+      if (isCommonRosterLoading) invalidateCommonRosterRequest();
       updateCount();
+      clearPresentationOrderForNameChange();
       clearError();
     });
+
+    updateCount();
+    updateCommonRosterButton();
+    checkCommonRosterLogin();
+
+    if (window.kwonClassAuth) {
+      try {
+        window.kwonClassAuth.onAuthStateChange((event) => {
+          invalidateCommonRosterRequest();
+          if (event === "SIGNED_OUT") {
+            isCommonRosterSignedIn = false;
+            restoreCommonRosterStatus();
+          }
+          checkCommonRosterLogin();
+        });
+      } catch (error) {
+        showCommonRosterStatus("로그인 상태를 확인하지 못했습니다. 직접 이름을 입력해 사용할 수 있습니다.");
+      }
+    }
   </script>
 </body>
 </html>
