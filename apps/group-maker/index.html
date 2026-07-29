@@ -680,66 +680,133 @@
       );
     }
 
-    function chooseRandom(candidates) {
-      return candidates[Math.floor(Math.random() * candidates.length)];
+    function createShuffledGroupTargetSizes(studentTotal, numberOfGroups) {
+      return shuffle(getGroupTargetSizes(studentTotal, numberOfGroups));
     }
 
-    function selectBalancedGroup(groups, targetSizes, genderCounts, genderCode) {
-      const candidates = groups
-        .map((group, index) => index)
-        .filter((index) => groups[index].length < targetSizes[index]);
-      const lowestGenderCount = Math.min(
-        ...candidates.map((index) => genderCounts[genderCode][index])
-      );
-      const genderCandidates = candidates.filter(
-        (index) => genderCounts[genderCode][index] === lowestGenderCount
-      );
-      const lowestGroupSize = Math.min(
-        ...genderCandidates.map((index) => groups[index].length)
-      );
-      return chooseRandom(
-        genderCandidates.filter((index) => groups[index].length === lowestGroupSize)
-      );
+    function compareGenderPlanScore(first, second) {
+      const scoreKeys = ["maxDifference", "differenceSquareSum", "genderSquareSum", "unspecifiedSquareSum"];
+      for (const key of scoreKeys) {
+        if (first[key] !== second[key]) return first[key] - second[key];
+      }
+      return 0;
     }
 
-    function selectSmallestGroup(groups, targetSizes) {
-      const candidates = groups
-        .map((group, index) => index)
-        .filter((index) => groups[index].length < targetSizes[index]);
-      const lowestGroupSize = Math.min(...candidates.map((index) => groups[index].length));
-      return chooseRandom(candidates.filter((index) => groups[index].length === lowestGroupSize));
+    function createGenderTargets(targetSizes, maleTotal, femaleTotal, unspecifiedTotal) {
+      let states = new Map();
+      states.set("0:0", {
+        maleUsed: 0,
+        femaleUsed: 0,
+        unspecifiedUsed: 0,
+        maxDifference: 0,
+        differenceSquareSum: 0,
+        genderSquareSum: 0,
+        unspecifiedSquareSum: 0,
+        previous: null,
+        target: null
+      });
+
+      targetSizes.forEach((groupSize) => {
+        const nextStates = new Map();
+        states.forEach((state) => {
+          for (let maleTarget = 0; maleTarget <= groupSize; maleTarget += 1) {
+            const nextMaleUsed = state.maleUsed + maleTarget;
+            if (nextMaleUsed > maleTotal) continue;
+
+            for (let femaleTarget = 0; femaleTarget <= groupSize - maleTarget; femaleTarget += 1) {
+              const nextFemaleUsed = state.femaleUsed + femaleTarget;
+              if (nextFemaleUsed > femaleTotal) continue;
+
+              const unspecifiedTarget = groupSize - maleTarget - femaleTarget;
+              const nextUnspecifiedUsed = state.unspecifiedUsed + unspecifiedTarget;
+              if (nextUnspecifiedUsed > unspecifiedTotal) continue;
+
+              const candidate = {
+                maleUsed: nextMaleUsed,
+                femaleUsed: nextFemaleUsed,
+                unspecifiedUsed: nextUnspecifiedUsed,
+                maxDifference: Math.max(state.maxDifference, Math.abs(maleTarget - femaleTarget)),
+                differenceSquareSum: state.differenceSquareSum + (maleTarget - femaleTarget) ** 2,
+                genderSquareSum: state.genderSquareSum + maleTarget ** 2 + femaleTarget ** 2,
+                unspecifiedSquareSum: state.unspecifiedSquareSum + unspecifiedTarget ** 2,
+                previous: state,
+                target: { maleTarget, femaleTarget, unspecifiedTarget }
+              };
+              const key = `${nextMaleUsed}:${nextFemaleUsed}`;
+              const existing = nextStates.get(key);
+              const comparison = existing ? compareGenderPlanScore(candidate, existing) : -1;
+              if (!existing || comparison < 0 || (comparison === 0 && Math.random() < 0.5)) {
+                nextStates.set(key, candidate);
+              }
+            }
+          }
+        });
+        states = nextStates;
+      });
+
+      const finalState = states.get(`${maleTotal}:${femaleTotal}`);
+      if (!finalState || finalState.unspecifiedUsed !== unspecifiedTotal) {
+        throw new Error("성별 목표 인원표를 계산하지 못했습니다.");
+      }
+
+      const targets = [];
+      for (let state = finalState; state.previous; state = state.previous) {
+        targets.unshift(state.target);
+      }
+      return targets;
     }
 
-    function makeGenderBalancedGroups(students, numberOfGroups) {
-      const targetSizes = getGroupTargetSizes(students.length, numberOfGroups);
-      const groups = targetSizes.map(() => []);
-      const genderCounts = {
-        male: targetSizes.map(() => 0),
-        female: targetSizes.map(() => 0)
-      };
+    function hasValidGenderTargets(targets, targetSizes, maleTotal, femaleTotal, unspecifiedTotal) {
+      if (targets.length !== targetSizes.length) return false;
+      const totals = targets.reduce((result, target, index) => {
+        if (target.maleTarget + target.femaleTarget + target.unspecifiedTarget !== targetSizes[index]) {
+          result.valid = false;
+        }
+        result.male += target.maleTarget;
+        result.female += target.femaleTarget;
+        result.unspecified += target.unspecifiedTarget;
+        return result;
+      }, { male: 0, female: 0, unspecified: 0, valid: true });
+      return totals.valid && totals.male === maleTotal && totals.female === femaleTotal && totals.unspecified === unspecifiedTotal;
+    }
+
+    function makeGenderBalancedGroups(students, targetSizes) {
       const maleStudents = shuffle(students.filter((student) => student.genderCode === "male"));
       const femaleStudents = shuffle(students.filter((student) => student.genderCode === "female"));
       const unspecifiedStudents = shuffle(students.filter((student) => student.genderCode === "unspecified"));
+      const targets = createGenderTargets(
+        targetSizes,
+        maleStudents.length,
+        femaleStudents.length,
+        unspecifiedStudents.length
+      );
 
-      // 더 많은 성별 범주를 먼저 분산해 두 성별 모두의 편차를 줄입니다.
-      [
-        { genderCode: "male", students: maleStudents },
-        { genderCode: "female", students: femaleStudents }
-      ]
-        .sort((first, second) => second.students.length - first.students.length)
-        .forEach(({ genderCode, students: studentsForGender }) => {
-          studentsForGender.forEach((student) => {
-            const groupIndex = selectBalancedGroup(groups, targetSizes, genderCounts, genderCode);
-            groups[groupIndex].push(student);
-            genderCounts[genderCode][groupIndex] += 1;
-          });
-        });
+      if (!hasValidGenderTargets(targets, targetSizes, maleStudents.length, femaleStudents.length, unspecifiedStudents.length)) {
+        throw new Error("성별 목표 인원표를 확인하지 못했습니다.");
+      }
 
-      unspecifiedStudents.forEach((student) => {
-        const groupIndex = selectSmallestGroup(groups, targetSizes);
-        groups[groupIndex].push(student);
+      let maleIndex = 0;
+      let femaleIndex = 0;
+      let unspecifiedIndex = 0;
+      const groups = targets.map((target) => {
+        const group = [
+          ...maleStudents.slice(maleIndex, maleIndex + target.maleTarget),
+          ...femaleStudents.slice(femaleIndex, femaleIndex + target.femaleTarget),
+          ...unspecifiedStudents.slice(unspecifiedIndex, unspecifiedIndex + target.unspecifiedTarget)
+        ];
+        maleIndex += target.maleTarget;
+        femaleIndex += target.femaleTarget;
+        unspecifiedIndex += target.unspecifiedTarget;
+        return shuffle(group);
       });
 
+      const hasEveryStudent = maleIndex === maleStudents.length
+        && femaleIndex === femaleStudents.length
+        && unspecifiedIndex === unspecifiedStudents.length;
+      const hasTargetSizes = groups.every((group, index) => group.length === targetSizes[index]);
+      if (!hasEveryStudent || !hasTargetSizes || !hasValidAssignment(groups, students.length)) {
+        throw new Error("성별 균형 모둠 배정을 확인하지 못했습니다.");
+      }
       return groups;
     }
 
@@ -751,6 +818,10 @@
     function hasValidGroupSizes(groups, studentTotal, numberOfGroups) {
       const targetSizes = getGroupTargetSizes(studentTotal, numberOfGroups);
       return groups.every((group, index) => group.length === targetSizes[index]);
+    }
+
+    function hasValidGroupSizesForTargets(groups, targetSizes) {
+      return groups.length === targetSizes.length && groups.every((group, index) => group.length === targetSizes[index]);
     }
 
     function renderGroups(groups) {
@@ -788,15 +859,27 @@
           genderCode: student.genderCode
         }))
         : null;
-      const groups = useGenderBalance
-        ? makeGenderBalancedGroups(loadedStudentsForGroups, settings.numberOfGroups)
-        : usesLoadedRoster
-          ? makeBalancedGroups(loadedStudentsForGroups, settings.numberOfGroups)
-          : makeBalancedGroups(settings.names, settings.numberOfGroups);
+      const genderTargetSizes = useGenderBalance
+        ? createShuffledGroupTargetSizes(settings.names.length, settings.numberOfGroups)
+        : null;
+      let groups;
+
+      try {
+        groups = useGenderBalance
+          ? makeGenderBalancedGroups(loadedStudentsForGroups, genderTargetSizes)
+          : usesLoadedRoster
+            ? makeBalancedGroups(loadedStudentsForGroups, settings.numberOfGroups)
+            : makeBalancedGroups(settings.names, settings.numberOfGroups);
+      } catch (error) {
+        showError("성별 균형 모둠을 만들지 못했습니다. 다시 시도해 주세요.", makeGroupsButton);
+        return false;
+      }
 
       if (
         !hasValidAssignment(groups, settings.names.length) ||
-        !hasValidGroupSizes(groups, settings.names.length, settings.numberOfGroups)
+        !(useGenderBalance
+          ? hasValidGroupSizesForTargets(groups, genderTargetSizes)
+          : hasValidGroupSizes(groups, settings.names.length, settings.numberOfGroups))
       ) {
         showError("학생 배정 확인 중 문제가 발생했습니다. 다시 시도해 주세요.", makeGroupsButton);
         return false;
