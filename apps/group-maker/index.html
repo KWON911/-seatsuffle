@@ -652,11 +652,13 @@
       return { names, numberOfGroups: Math.ceil(names.length / peoplePerGroup), mode: selectedMode.value };
     }
 
-    function makeBalancedGroups(names, numberOfGroups) {
-      const students = names.map((name, index) => ({ name, index }));
-      const shuffledStudents = shuffle(students);
-      const baseSize = Math.floor(students.length / numberOfGroups);
-      const extraStudents = students.length % numberOfGroups;
+    function makeBalancedGroups(students, numberOfGroups) {
+      const normalizedStudents = students.map((student, index) => typeof student === "string"
+        ? { name: student, index }
+        : { ...student, index });
+      const shuffledStudents = shuffle(normalizedStudents);
+      const baseSize = Math.floor(normalizedStudents.length / numberOfGroups);
+      const extraStudents = normalizedStudents.length % numberOfGroups;
       const groups = [];
       let startIndex = 0;
 
@@ -778,16 +780,19 @@
 
     function createGroups(settings) {
       const useGenderBalance = canUseGenderBalance();
-      const genderBalancedStudents = useGenderBalance
-        ? settings.names.map((name, index) => ({
-          name,
+      const usesLoadedRoster = loadedRosterStudents.length > 0 && studentNames.value === loadedRosterText;
+      const loadedStudentsForGroups = usesLoadedRoster
+        ? loadedRosterStudents.map((student, index) => ({
+          name: student.displayName,
           index,
-          genderCode: loadedRosterStudents[index]?.genderCode || "unspecified"
+          genderCode: student.genderCode
         }))
         : null;
       const groups = useGenderBalance
-        ? makeGenderBalancedGroups(genderBalancedStudents, settings.numberOfGroups)
-        : makeBalancedGroups(settings.names, settings.numberOfGroups);
+        ? makeGenderBalancedGroups(loadedStudentsForGroups, settings.numberOfGroups)
+        : usesLoadedRoster
+          ? makeBalancedGroups(loadedStudentsForGroups, settings.numberOfGroups)
+          : makeBalancedGroups(settings.names, settings.numberOfGroups);
 
       if (
         !hasValidAssignment(groups, settings.names.length) ||

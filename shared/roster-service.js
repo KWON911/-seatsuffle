@@ -1,6 +1,6 @@
 (() => {
   const ROSTER_COLUMNS = "id, roster_name, school_year, grade, class_name, is_default, created_at, updated_at";
-  const STUDENT_COLUMNS = "id, roster_id, display_name, gender_code, sort_order, is_active, created_at, updated_at";
+  const STUDENT_COLUMNS = "id, roster_id, display_name, gender_code, student_number, sort_order, is_active, created_at, updated_at";
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const GENDER_CODES = new Set(["male", "female", "unspecified"]);
 
@@ -30,6 +30,10 @@
 
     if (code === "23503" || source.includes("foreign key")) {
       return "연결된 학급 정보를 확인할 수 없습니다.";
+    }
+
+    if (code === "23505" && (source.includes("student_number") || source.includes("students_user_roster_student_number"))) {
+      return "이 학급에는 이미 같은 학생 번호가 있습니다.";
     }
 
     if (code === "23505" || source.includes("unique constraint")) {
@@ -88,6 +92,14 @@
     return id;
   }
 
+  function normalizeStudentNumber(value) {
+    const text = String(value).trim();
+    if (!/^\d+$/.test(text)) {
+      fail("학생 번호는 1 이상의 정수로 입력해 주세요.");
+    }
+    return normalizeInteger(text, "학생 번호", 1);
+  }
+
   function normalizeRosterForCreate(input) {
     const source = input && typeof input === "object" ? input : {};
     return {
@@ -132,9 +144,16 @@
       fail("성별 정보는 남, 여, 미입력 중 하나로 선택해 주세요.");
     }
 
+    const hasStudentNumber = source.studentNumber !== undefined
+      && source.studentNumber !== null
+      && String(source.studentNumber).trim() !== "";
+
     return {
       display_name: normalizeText(source.displayName, "학생 이름"),
       gender_code: genderCode,
+      student_number: hasStudentNumber
+        ? normalizeStudentNumber(source.studentNumber)
+        : null,
       sort_order: source.sortOrder === undefined
         ? defaultSortOrder
         : normalizeInteger(source.sortOrder, "학생 순서", 0),
@@ -157,6 +176,12 @@
         fail("성별 정보는 남, 여, 미입력 중 하나로 선택해 주세요.");
       }
       changes.gender_code = genderCode;
+    }
+    if (Object.prototype.hasOwnProperty.call(source, "studentNumber")) {
+      const value = source.studentNumber;
+      changes.student_number = value === undefined || value === null || String(value).trim() === ""
+        ? null
+        : normalizeStudentNumber(value);
     }
     if (Object.prototype.hasOwnProperty.call(source, "sortOrder")) {
       changes.sort_order = normalizeInteger(source.sortOrder, "학생 순서", 0);

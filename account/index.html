@@ -162,13 +162,27 @@
     .student-list { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
     .student-list li { padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; background: #fbfdff; overflow-wrap: anywhere; }
     .student-count { margin-top: 10px; color: var(--primary-dark); font-weight: 800; }
-    .student-edit-row { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(120px, 0.45fr); gap: 10px; align-items: end; }
+    .student-edit-row { display: grid; grid-template-columns: auto minmax(100px, 0.4fr) minmax(0, 1fr) minmax(120px, 0.45fr); gap: 10px; align-items: end; }
     .student-number { min-width: 30px; padding-bottom: 13px; color: var(--primary-dark); font-weight: 800; }
     .student-edit-field { display: grid; gap: 6px; }
     .student-edit-field label { font-size: 0.9rem; }
     .student-edit-row input, .student-edit-row select { min-height: 42px; }
     .student-row-actions { display: flex; flex-wrap: wrap; grid-column: 2 / -1; gap: 10px; }
     .student-row-actions button { min-height: 42px; }
+    .csv-tools { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .csv-tools h3 { margin: 0 0 10px; font-size: 1.12rem; }
+    .csv-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .csv-actions button { min-height: 42px; }
+    .csv-file-input { margin-top: 10px; padding: 10px; min-height: auto; background: #fbfdff; }
+    .csv-file-name { margin-top: 10px; color: var(--muted); font-size: 0.95rem; overflow-wrap: anywhere; }
+    .csv-preview { margin-top: 18px; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: #fbfdff; }
+    .csv-preview h4 { margin: 0 0 10px; font-size: 1rem; }
+    .csv-summary { margin: 0; color: var(--primary-dark); font-weight: 800; line-height: 1.6; }
+    .csv-preview-table-wrap { overflow-x: auto; margin-top: 12px; }
+    .csv-preview table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    .csv-preview th, .csv-preview td { padding: 9px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    .csv-preview th { color: var(--primary-dark); }
+    .csv-preview-more { margin: 12px 0 0; color: var(--muted); }
 
     [hidden] { display: none !important; }
 
@@ -184,6 +198,7 @@
       .student-edit-row { grid-template-columns: 1fr; }
       .student-number { padding-bottom: 0; }
       .student-row-actions { display: grid; grid-column: auto; grid-template-columns: 1fr; }
+      .csv-actions { display: grid; grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -280,11 +295,39 @@
               <form id="studentForm" novalidate>
                 <label for="studentNames">학생 이름</label>
                 <textarea id="studentNames" name="studentNames" autocomplete="off" aria-describedby="studentNamesHint studentFormError" aria-invalid="false" placeholder="학생01&#10;학생02"></textarea>
-                <p class="hint" id="studentNamesHint">학생 이름을 한 줄에 한 명씩 입력해 주세요. 예: 학생01, 학생02</p>
+                <p class="hint" id="studentNamesHint">학생 이름을 한 줄에 한 명씩 입력해 주세요. 예: 학생01, 학생02. 학생 번호는 추가 후 학생 정보 수정에서 입력할 수 있습니다.</p>
                 <button id="saveStudentsButton" type="submit">학생 명단 저장</button>
               </form>
               <p class="message" id="studentFormMessage" role="status" aria-live="polite" aria-atomic="true"></p>
               <p class="message error" id="studentFormError" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
+
+              <section class="csv-tools" aria-labelledby="csvToolsTitle">
+                <h3 id="csvToolsTitle">CSV 백업·가져오기</h3>
+                <p class="hint">선택한 학급의 학생 명단을 백업하거나 CSV 파일의 학생을 기존 명단에 추가할 수 있습니다.</p>
+                <div class="csv-actions">
+                  <button class="secondary" id="downloadCsvButton" type="button" disabled>CSV 백업 내려받기</button>
+                </div>
+                <label for="csvFileInput">CSV 파일 선택</label>
+                <input class="csv-file-input" id="csvFileInput" type="file" accept=".csv,text/csv" aria-describedby="csvFileHint csvImportError" disabled>
+                <p class="hint" id="csvFileHint">번호, 이름, 성별 열이 있는 UTF-8 CSV 파일만 선택해 주세요. 파일은 이 브라우저에서만 읽습니다.</p>
+                <p class="csv-file-name" id="csvFileName" aria-live="polite">선택한 파일이 없습니다.</p>
+                <p class="message" id="csvImportMessage" role="status" aria-live="polite" aria-atomic="true"></p>
+                <p class="message error" id="csvImportError" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
+                <div class="csv-preview" id="csvPreview" hidden aria-labelledby="csvPreviewTitle">
+                  <h4 id="csvPreviewTitle">가져오기 미리보기</h4>
+                  <p class="csv-summary" id="csvPreviewSummary"></p>
+                  <div class="csv-preview-table-wrap">
+                    <table>
+                      <thead><tr><th scope="col">번호</th><th scope="col">이름</th><th scope="col">성별</th></tr></thead>
+                      <tbody id="csvPreviewBody"></tbody>
+                    </table>
+                  </div>
+                  <p class="csv-preview-more" id="csvPreviewMore"></p>
+                </div>
+                <div class="csv-actions">
+                  <button id="importCsvButton" type="button" disabled>학생 추가하기</button>
+                </div>
+              </section>
 
               <section class="roster-list-section" aria-labelledby="studentListTitle">
                 <div class="list-header">
@@ -344,6 +387,16 @@
       const saveStudentsButton = document.querySelector("#saveStudentsButton");
       const studentFormMessage = document.querySelector("#studentFormMessage");
       const studentFormError = document.querySelector("#studentFormError");
+      const downloadCsvButton = document.querySelector("#downloadCsvButton");
+      const csvFileInput = document.querySelector("#csvFileInput");
+      const csvFileName = document.querySelector("#csvFileName");
+      const csvImportMessage = document.querySelector("#csvImportMessage");
+      const csvImportError = document.querySelector("#csvImportError");
+      const csvPreview = document.querySelector("#csvPreview");
+      const csvPreviewSummary = document.querySelector("#csvPreviewSummary");
+      const csvPreviewBody = document.querySelector("#csvPreviewBody");
+      const csvPreviewMore = document.querySelector("#csvPreviewMore");
+      const importCsvButton = document.querySelector("#importCsvButton");
       const reloadStudentsButton = document.querySelector("#reloadStudentsButton");
       const studentCount = document.querySelector("#studentCount");
       const studentListMessage = document.querySelector("#studentListMessage");
@@ -353,6 +406,9 @@
       const defaultCreateRosterText = "학급 만들기";
       const defaultSaveStudentsText = "학생 명단 저장";
       const studentGenderCodes = new Set(["male", "female", "unspecified"]);
+      const csvGenderLabels = Object.freeze({ male: "남", female: "여", unspecified: "미지정" });
+      const csvGenderCodes = Object.freeze({ "남": "male", "여": "female", "미지정": "unspecified" });
+      const maxCsvFileBytes = 256 * 1024;
       const rosterActionRosterIds = new WeakMap();
       let cooldownSeconds = 0;
       let cooldownTimer = null;
@@ -369,6 +425,11 @@
       let isStudentListLoading = false;
       let isSavingStudents = false;
       let isStudentMutation = false;
+      let isCsvProcessing = false;
+      let isCsvImportSaving = false;
+      let csvFileRequestVersion = 0;
+      let csvImportStudents = null;
+      let csvImportRosterId = null;
 
       schoolYearInput.value = String(new Date().getFullYear());
 
@@ -460,7 +521,7 @@
       }
 
       function updateRosterActionAvailability() {
-        const shouldDisable = isRosterListLoading || isRosterMutation || isSavingStudents || isStudentMutation || !currentSignedInEmail;
+        const shouldDisable = isRosterListLoading || isRosterMutation || isSavingStudents || isStudentMutation || isCsvImportSaving || !currentSignedInEmail;
         rosterList.querySelectorAll("[data-roster-action]").forEach((button) => {
           button.disabled = shouldDisable || button.dataset.selectedRoster === "true";
         });
@@ -468,14 +529,15 @@
       }
 
       function updateStudentActionAvailability() {
-        const shouldDisable = isStudentListLoading || isSavingStudents || isStudentMutation || !selectedRoster || !currentSignedInEmail;
+        const shouldDisable = isStudentListLoading || isSavingStudents || isStudentMutation || isCsvImportSaving || !selectedRoster || !currentSignedInEmail;
         saveStudentsButton.disabled = shouldDisable;
         reloadStudentsButton.disabled = shouldDisable;
         updateStudentRowAvailability();
+        updateCsvActionAvailability();
       }
 
       function updateStudentRowAvailability() {
-        const shouldDisable = isStudentListLoading || isSavingStudents || isStudentMutation || !selectedRoster || !currentSignedInEmail;
+        const shouldDisable = isStudentListLoading || isSavingStudents || isStudentMutation || isCsvImportSaving || !selectedRoster || !currentSignedInEmail;
         studentList.querySelectorAll("[data-student-control]").forEach((control) => {
           control.disabled = shouldDisable;
         });
@@ -488,6 +550,30 @@
         studentNamesInput.setAttribute("aria-invalid", "false");
       }
 
+      function updateCsvActionAvailability() {
+        const shouldDisable = isStudentListLoading || isSavingStudents || isStudentMutation || isCsvImportSaving || !selectedRoster || !currentSignedInEmail;
+        downloadCsvButton.disabled = shouldDisable;
+        csvFileInput.disabled = shouldDisable || isCsvProcessing;
+        importCsvButton.disabled = shouldDisable || isCsvProcessing || !csvImportStudents || csvImportRosterId !== selectedRoster?.id;
+      }
+
+      function clearCsvImportState() {
+        csvFileRequestVersion += 1;
+        isCsvProcessing = false;
+        csvImportStudents = null;
+        csvImportRosterId = null;
+        csvFileInput.value = "";
+        csvFileName.textContent = "선택한 파일이 없습니다.";
+        csvImportMessage.textContent = "";
+        csvImportError.textContent = "";
+        csvImportError.hidden = true;
+        csvPreview.hidden = true;
+        csvPreviewSummary.textContent = "";
+        csvPreviewBody.replaceChildren();
+        csvPreviewMore.textContent = "";
+        updateCsvActionAvailability();
+      }
+
       function clearStudentView() {
         studentRequestVersion += 1;
         studentViewVersion += 1;
@@ -496,6 +582,8 @@
         isStudentListLoading = false;
         isSavingStudents = false;
         isStudentMutation = false;
+        isCsvImportSaving = false;
+        clearCsvImportState();
         studentNamesInput.value = "";
         saveStudentsButton.textContent = defaultSaveStudentsText;
         selectedRosterSummary.textContent = "";
@@ -665,12 +753,13 @@
       }
 
       function selectRosterForStudentManagement(roster) {
-        if (isSavingStudents || isStudentMutation || !currentSignedInEmail) return;
+        if (isSavingStudents || isStudentMutation || isCsvImportSaving || !currentSignedInEmail) return;
 
         studentRequestVersion += 1;
         studentViewVersion += 1;
         selectedRoster = roster;
         selectedStudents = [];
+        clearCsvImportState();
         studentNamesInput.value = "";
         studentManagementContent.hidden = false;
         studentSelectionMessage.hidden = true;
@@ -693,7 +782,7 @@
           button.textContent = isSelected ? "현재 선택된 학급" : "학생 명단 관리";
           button.setAttribute("aria-pressed", String(isSelected));
           button.setAttribute("aria-label", isSelected ? "현재 선택된 학급" : "학생 명단 관리");
-          button.disabled = isSelected || isRosterListLoading || isRosterMutation || isSavingStudents || !currentSignedInEmail;
+          button.disabled = isSelected || isRosterListLoading || isRosterMutation || isSavingStudents || isCsvImportSaving || !currentSignedInEmail;
         });
       }
 
@@ -713,6 +802,9 @@
         students.forEach((student, index) => {
           const item = document.createElement("li");
           const number = document.createElement("span");
+          const studentNumberField = document.createElement("div");
+          const studentNumberLabel = document.createElement("label");
+          const studentNumberInput = document.createElement("input");
           const nameField = document.createElement("div");
           const nameLabel = document.createElement("label");
           const nameInput = document.createElement("input");
@@ -723,6 +815,7 @@
           const saveButton = document.createElement("button");
           const deleteButton = document.createElement("button");
           const displayNumber = index + 1;
+          const studentNumberId = `student-number-${displayNumber}`;
           const inputId = `student-name-${displayNumber}`;
           const genderId = `student-gender-${displayNumber}`;
           const genderCode = studentGenderCodes.has(student.gender_code)
@@ -731,11 +824,29 @@
 
           item.className = "student-edit-row";
           number.className = "student-number";
-          number.textContent = `${displayNumber}.`;
+          number.textContent = Number.isInteger(student.student_number) && student.student_number > 0
+            ? `${student.student_number}번`
+            : "번호 미입력";
+
+          studentNumberField.className = "student-edit-field";
+          studentNumberLabel.htmlFor = studentNumberId;
+          studentNumberLabel.textContent = "학생 번호";
+          studentNumberInput.id = studentNumberId;
+          studentNumberInput.type = "number";
+          studentNumberInput.min = "1";
+          studentNumberInput.step = "1";
+          studentNumberInput.inputMode = "numeric";
+          studentNumberInput.autocomplete = "off";
+          studentNumberInput.value = Number.isInteger(student.student_number) && student.student_number > 0
+            ? String(student.student_number)
+            : "";
+          studentNumberInput.setAttribute("aria-invalid", "false");
+          studentNumberInput.dataset.studentControl = "number";
+          studentNumberField.append(studentNumberLabel, studentNumberInput);
 
           nameField.className = "student-edit-field";
           nameLabel.htmlFor = inputId;
-          nameLabel.textContent = `${displayNumber}번 학생 이름`;
+          nameLabel.textContent = "학생 이름";
           nameInput.id = inputId;
           nameInput.type = "text";
           nameInput.autocomplete = "off";
@@ -746,7 +857,7 @@
 
           genderField.className = "student-edit-field";
           genderLabel.htmlFor = genderId;
-          genderLabel.textContent = `${displayNumber}번 학생 성별`;
+          genderLabel.textContent = "학생 성별";
           genderSelect.id = genderId;
           genderSelect.dataset.studentControl = "gender";
           [
@@ -769,7 +880,7 @@
           saveButton.setAttribute("aria-label", `${displayNumber}번 학생 정보 저장`);
           saveButton.textContent = "변경 저장";
           saveButton.addEventListener("click", () => {
-            updateStudent(student, nameInput, genderSelect, saveButton);
+            updateStudent(student, studentNumberInput, nameInput, genderSelect, saveButton);
           });
 
           deleteButton.type = "button";
@@ -782,7 +893,7 @@
           });
           actions.append(saveButton, deleteButton);
 
-          item.append(number, nameField, genderField, actions);
+          item.append(number, studentNumberField, nameField, genderField, actions);
           studentList.append(item);
         });
 
@@ -851,19 +962,25 @@
         );
       }
 
-      async function updateStudent(student, nameInput, genderSelect, saveButton) {
-        if (isSavingStudents || isStudentMutation || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
+      async function updateStudent(student, studentNumberInput, nameInput, genderSelect, saveButton) {
+        if (isSavingStudents || isStudentMutation || isCsvImportSaving || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
 
         const displayName = nameInput.value.trim();
         const genderCode = genderSelect.value;
+        const studentNumberText = studentNumberInput.value.trim();
+        const studentNumber = studentNumberText === "" ? null : Number(studentNumberText);
         const originalGenderCode = studentGenderCodes.has(student.gender_code)
           ? student.gender_code
           : "unspecified";
+        const originalStudentNumber = Number.isInteger(student.student_number) && student.student_number > 0
+          ? student.student_number
+          : null;
 
         studentListMessage.textContent = "";
         studentListError.textContent = "";
         studentListError.hidden = true;
         nameInput.setAttribute("aria-invalid", "false");
+        studentNumberInput.setAttribute("aria-invalid", "false");
 
         if (!displayName) {
           nameInput.setAttribute("aria-invalid", "true");
@@ -878,7 +995,23 @@
           studentListError.hidden = false;
           return;
         }
-        if (displayName === student.display_name && genderCode === originalGenderCode) {
+        if (studentNumber !== null && (!/^\d+$/.test(studentNumberText) || !Number.isInteger(studentNumber) || studentNumber < 1)) {
+          studentNumberInput.setAttribute("aria-invalid", "true");
+          studentNumberInput.focus();
+          studentListError.textContent = "학생 번호는 1 이상의 정수로 입력해 주세요.";
+          studentListError.hidden = false;
+          return;
+        }
+        if (studentNumber !== null && selectedStudents.some((otherStudent) => (
+          otherStudent.id !== student.id && otherStudent.student_number === studentNumber
+        ))) {
+          studentNumberInput.setAttribute("aria-invalid", "true");
+          studentNumberInput.focus();
+          studentListError.textContent = "이 학급에는 이미 같은 학생 번호가 있습니다.";
+          studentListError.hidden = false;
+          return;
+        }
+        if (displayName === student.display_name && genderCode === originalGenderCode && studentNumber === originalStudentNumber) {
           studentListMessage.textContent = "변경된 내용이 없습니다.";
           return;
         }
@@ -895,7 +1028,8 @@
         try {
           await window.kwonClassRosterService.updateStudent(student.id, {
             displayName,
-            genderCode
+            genderCode,
+            studentNumber
           });
           if (!isCurrentStudentView(selectedRosterIdAtAction, signedInEmailAtAction, studentViewVersionAtAction)) return;
 
@@ -919,7 +1053,7 @@
       }
 
       async function deleteStudent(student, button) {
-        if (isSavingStudents || isStudentMutation || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
+        if (isSavingStudents || isStudentMutation || isCsvImportSaving || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
 
         const confirmationMessage =
           "이 학생을 명단에서 삭제하시겠습니까?\n삭제한 학생 정보는 되돌릴 수 없습니다.";
@@ -959,6 +1093,335 @@
         }
       }
 
+      function normalizeStudentNameForComparison(name) {
+        return String(name || "").trim().normalize("NFC").toLocaleLowerCase();
+      }
+
+      function restoreCsvFormulaEscape(name) {
+        const text = String(name || "");
+        return /^'[=+\-@]/.test(text) ? text.slice(1) : text;
+      }
+
+      function toCsvGenderLabel(genderCode) {
+        return csvGenderLabels[genderCode] || "미지정";
+      }
+
+      function escapeCsvField(value, { protectSpreadsheetFormula = false } = {}) {
+        let text = String(value ?? "");
+        if (protectSpreadsheetFormula && /^[=+\-@]/.test(text)) {
+          text = `'${text}`;
+        }
+        return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+      }
+
+      function getSafeCsvFileName(roster) {
+        const rawName = `${roster.school_year}학년도_${roster.grade}학년*${roster.class_name}*학생명단.csv`;
+        return rawName.replace(/[\\/:*?"<>|\u0000-\u001F]/g, "_");
+      }
+
+      function downloadCsvBackup() {
+        if (!selectedRoster) return;
+        if (selectedStudents.some((student) => !Number.isInteger(student.student_number) || student.student_number < 1)) {
+          studentListMessage.textContent = "";
+          studentListError.textContent = "CSV 백업 전에 모든 학생의 실제 번호를 입력해 주세요.";
+          studentListError.hidden = false;
+          return;
+        }
+
+        const rows = [
+          ["번호", "이름", "성별"],
+          ...selectedStudents.map((student) => [
+            String(student.student_number),
+            student.display_name,
+            toCsvGenderLabel(student.gender_code)
+          ])
+        ];
+        const csvText = `\uFEFF${rows.map((row) => row.map((value, index) => escapeCsvField(value, {
+          protectSpreadsheetFormula: index === 1
+        })).join(",")).join("\r\n")}\r\n`;
+        const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = getSafeCsvFileName(selectedRoster);
+        link.hidden = true;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+
+        studentListMessage.textContent = selectedStudents.length === 0
+          ? "학생이 없어 헤더만 포함된 CSV 백업 파일을 내려받았습니다."
+          : `학생 ${selectedStudents.length}명의 CSV 백업 파일을 내려받았습니다.`;
+        studentListError.textContent = "";
+        studentListError.hidden = true;
+      }
+
+      function parseCsv(text) {
+        const rows = [];
+        let row = [];
+        let field = "";
+        let inQuotes = false;
+        let afterQuote = false;
+        let lineNumber = 1;
+        let rowStartLine = 1;
+
+        function finishRow() {
+          row.push(field);
+          rows.push({ values: row, lineNumber: rowStartLine });
+          row = [];
+          field = "";
+          afterQuote = false;
+        }
+
+        for (let index = 0; index < text.length; index += 1) {
+          const character = text[index];
+          const nextCharacter = text[index + 1];
+
+          if (inQuotes) {
+            if (character === '"') {
+              if (nextCharacter === '"') {
+                field += '"';
+                index += 1;
+              } else {
+                inQuotes = false;
+                afterQuote = true;
+              }
+            } else {
+              field += character;
+              if (character === "\r") {
+                if (nextCharacter === "\n") index += 1;
+                lineNumber += 1;
+              } else if (character === "\n") {
+                lineNumber += 1;
+              }
+            }
+            continue;
+          }
+
+          if (afterQuote) {
+            if (character === ",") {
+              row.push(field);
+              field = "";
+              afterQuote = false;
+              continue;
+            }
+            if (character === "\r" || character === "\n") {
+              finishRow();
+              if (character === "\r" && nextCharacter === "\n") index += 1;
+              lineNumber += 1;
+              rowStartLine = lineNumber;
+              continue;
+            }
+            throw new Error(`${lineNumber}행: 닫는 큰따옴표 뒤에는 쉼표 또는 줄바꿈만 올 수 있습니다.`);
+          }
+
+          if (character === '"') {
+            if (field !== "") {
+              throw new Error(`${lineNumber}행: 큰따옴표는 필드의 처음에만 사용할 수 있습니다.`);
+            }
+            inQuotes = true;
+            continue;
+          }
+          if (character === ",") {
+            row.push(field);
+            field = "";
+            continue;
+          }
+          if (character === "\r" || character === "\n") {
+            finishRow();
+            if (character === "\r" && nextCharacter === "\n") index += 1;
+            lineNumber += 1;
+            rowStartLine = lineNumber;
+            continue;
+          }
+          field += character;
+        }
+
+        if (inQuotes) {
+          throw new Error(`${rowStartLine}행: 큰따옴표가 닫히지 않았습니다.`);
+        }
+        if (field !== "" || row.length > 0 || afterQuote) finishRow();
+        return rows;
+      }
+
+      function validateCsvRows(rows, existingStudents) {
+        const nonBlankRows = rows.filter(({ values }) => !values.every((value) => value === ""));
+        if (nonBlankRows.length === 0) throw new Error("CSV 파일이 비어 있습니다.");
+
+        const header = nonBlankRows.shift();
+        if (header.values.length !== 3 || header.values[0] !== "번호" || header.values[1] !== "이름" || header.values[2] !== "성별") {
+          throw new Error(`${header.lineNumber}행: 첫 줄 헤더는 '번호,이름,성별' 순서여야 합니다.`);
+        }
+        if (nonBlankRows.length === 0) throw new Error("가져올 학생이 한 명 이상 있어야 합니다.");
+        if (nonBlankRows.length > 100) throw new Error("CSV 파일에는 학생을 최대 100명까지 넣을 수 있습니다.");
+
+        const seenNames = new Set();
+        const seenStudentNumbers = new Set();
+        const existingNames = new Set(existingStudents.map((student) => normalizeStudentNameForComparison(student.display_name)));
+        const existingStudentNumbers = new Set(existingStudents
+          .map((student) => student.student_number)
+          .filter((studentNumber) => Number.isInteger(studentNumber) && studentNumber > 0));
+        const students = nonBlankRows.map(({ values, lineNumber }, index) => {
+          if (values.length !== 3) throw new Error(`${lineNumber}행: 번호, 이름, 성별 3개 열이 모두 필요합니다.`);
+          const number = values[0].trim();
+          const displayName = restoreCsvFormulaEscape(values[1]).trim();
+          const genderLabel = values[2].trim();
+          if (!/^\d+$/.test(number) || Number(number) < 1) {
+            throw new Error(`${lineNumber}행: 번호는 1 이상의 정수여야 합니다.`);
+          }
+          if (!displayName) throw new Error(`${lineNumber}행: 학생 이름을 입력해 주세요.`);
+          if (!Object.prototype.hasOwnProperty.call(csvGenderCodes, genderLabel)) {
+            throw new Error(`${lineNumber}행: 성별은 남, 여, 미지정 중 하나여야 합니다.`);
+          }
+
+          const comparisonName = normalizeStudentNameForComparison(displayName);
+          const studentNumber = Number(number);
+          if (seenStudentNumbers.has(studentNumber)) throw new Error(`${lineNumber}행: CSV 파일 안에 같은 학생 번호가 중복되어 있습니다.`);
+          if (existingStudentNumbers.has(studentNumber)) throw new Error(`${lineNumber}행: 현재 학급에 이미 같은 학생 번호가 있습니다.`);
+          if (seenNames.has(comparisonName)) throw new Error(`${lineNumber}행: CSV 파일 안에 같은 이름이 중복되어 있습니다.`);
+          if (existingNames.has(comparisonName)) throw new Error(`${lineNumber}행: 현재 학급에 이미 같은 이름의 학생이 있습니다.`);
+          seenStudentNumbers.add(studentNumber);
+          seenNames.add(comparisonName);
+          return { studentNumber, displayName, genderCode: csvGenderCodes[genderLabel], isActive: true };
+        });
+
+        if (existingStudents.length + students.length > 100) {
+          throw new Error(`현재 학생 ${existingStudents.length}명과 가져올 학생 ${students.length}명의 합계는 100명을 넘을 수 없습니다.`);
+        }
+        return students;
+      }
+
+      function renderCsvPreview(students) {
+        const counts = students.reduce((result, student) => {
+          result[student.genderCode] += 1;
+          return result;
+        }, { male: 0, female: 0, unspecified: 0 });
+        csvPreviewSummary.textContent = `총 ${students.length}명 · 남 ${counts.male}명 · 여 ${counts.female}명 · 미지정 ${counts.unspecified}명`;
+        csvPreviewBody.replaceChildren();
+        students.slice(0, 20).forEach((student, index) => {
+          const row = document.createElement("tr");
+          [String(student.studentNumber), student.displayName, toCsvGenderLabel(student.genderCode)].forEach((value) => {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.append(cell);
+          });
+          csvPreviewBody.append(row);
+        });
+        csvPreviewMore.textContent = students.length > 20 ? `외 ${students.length - 20}명` : "";
+        csvPreview.hidden = false;
+      }
+
+      async function handleCsvFileSelection() {
+        const file = csvFileInput.files?.[0];
+        clearCsvImportState();
+        if (!file || !selectedRoster) return;
+
+        csvFileName.textContent = `선택한 파일: ${file.name}`;
+        const requestVersion = ++csvFileRequestVersion;
+        const rosterIdAtSelection = selectedRoster.id;
+        const mimeType = String(file.type || "").toLowerCase();
+        const allowedMimeTypes = new Set(["", "text/csv", "application/csv", "application/vnd.ms-excel", "text/plain"]);
+
+        if (!/\.csv$/i.test(file.name)) {
+          csvImportError.textContent = "CSV(.csv) 파일만 선택할 수 있습니다.";
+          csvImportError.hidden = false;
+          return;
+        }
+        if (!allowedMimeTypes.has(mimeType)) {
+          csvImportError.textContent = "CSV 형식으로 인식되는 파일만 선택할 수 있습니다.";
+          csvImportError.hidden = false;
+          return;
+        }
+        if (file.size === 0) {
+          csvImportError.textContent = "빈 CSV 파일은 가져올 수 없습니다.";
+          csvImportError.hidden = false;
+          return;
+        }
+        if (file.size > maxCsvFileBytes) {
+          csvImportError.textContent = "CSV 파일 크기는 256KB 이하여야 합니다.";
+          csvImportError.hidden = false;
+          return;
+        }
+
+        isCsvProcessing = true;
+        csvImportMessage.textContent = "CSV 파일을 검사하고 있습니다.";
+        updateCsvActionAvailability();
+        try {
+          const text = await file.text();
+          if (requestVersion !== csvFileRequestVersion || !selectedRoster || selectedRoster.id !== rosterIdAtSelection) return;
+          const rows = parseCsv(text.replace(/^\uFEFF/, ""));
+          const students = validateCsvRows(rows, selectedStudents);
+          csvImportStudents = students;
+          csvImportRosterId = rosterIdAtSelection;
+          csvImportMessage.textContent = "CSV 파일 검사가 완료되었습니다. 미리보기를 확인한 뒤 학생을 추가해 주세요.";
+          renderCsvPreview(students);
+        } catch (error) {
+          csvImportError.textContent = error.message || "CSV 파일을 읽지 못했습니다.";
+          csvImportError.hidden = false;
+          csvImportMessage.textContent = "";
+        } finally {
+          if (requestVersion === csvFileRequestVersion) {
+            isCsvProcessing = false;
+            updateCsvActionAvailability();
+          }
+        }
+      }
+
+      async function importCsvStudents() {
+        if (!csvImportStudents || !selectedRoster || csvImportRosterId !== selectedRoster.id || isCsvImportSaving) return;
+        const studentsAtSave = csvImportStudents;
+        if (!window.confirm(`기존 학생 명단은 유지하고 새 학생 ${studentsAtSave.length}명을 추가합니다.`)) return;
+
+        const selectedRosterIdAtSave = selectedRoster.id;
+        const signedInEmailAtSave = currentSignedInEmail;
+        const studentViewVersionAtSave = studentViewVersion;
+        isCsvImportSaving = true;
+        csvImportMessage.textContent = "현재 명단을 다시 확인한 뒤 학생을 저장하고 있습니다.";
+        csvImportError.textContent = "";
+        csvImportError.hidden = true;
+        updateStudentActionAvailability();
+        updateRosterActionAvailability();
+
+        try {
+          const currentStudents = await window.kwonClassRosterService.listStudents(selectedRosterIdAtSave, { includeInactive: false });
+          if (!isCurrentStudentView(selectedRosterIdAtSave, signedInEmailAtSave, studentViewVersionAtSave)) return;
+          validateCsvRows([
+            { values: ["번호", "이름", "성별"], lineNumber: 1 },
+            ...studentsAtSave.map((student, index) => ({
+              values: [String(student.studentNumber), student.displayName, toCsvGenderLabel(student.genderCode)],
+              lineNumber: index + 2
+            }))
+          ], currentStudents);
+
+          const lastSortOrder = currentStudents.reduce((maximum, student) => Math.max(maximum, student.sort_order), -1);
+          const studentsToCreate = studentsAtSave.map((student, index) => ({
+            ...student,
+            sortOrder: lastSortOrder + index + 1
+          }));
+          await window.kwonClassRosterService.createStudents(selectedRosterIdAtSave, studentsToCreate);
+          if (!isCurrentStudentView(selectedRosterIdAtSave, signedInEmailAtSave, studentViewVersionAtSave)) return;
+
+          await loadStudents();
+          if (isCurrentStudentView(selectedRosterIdAtSave, signedInEmailAtSave, studentViewVersionAtSave)) {
+            clearCsvImportState();
+            studentListMessage.textContent = `CSV에서 학생 ${studentsAtSave.length}명을 추가했습니다.`;
+          }
+        } catch (error) {
+          if (!isCurrentStudentView(selectedRosterIdAtSave, signedInEmailAtSave, studentViewVersionAtSave)) return;
+          csvImportMessage.textContent = "";
+          csvImportError.textContent = "저장 결과를 확인하지 못했습니다. 학생 목록을 다시 불러와 추가 여부를 확인한 뒤 다시 시도해 주세요.";
+          csvImportError.hidden = false;
+          reloadStudentsButton.hidden = false;
+        } finally {
+          if (isCurrentStudentView(selectedRosterIdAtSave, signedInEmailAtSave, studentViewVersionAtSave)) {
+            isCsvImportSaving = false;
+            updateStudentActionAvailability();
+            updateRosterActionAvailability();
+          }
+        }
+      }
+
       function getStudentsForSave() {
         clearStudentFormMessages();
         const names = studentNamesInput.value
@@ -985,6 +1448,7 @@
         return names.map((displayName, index) => ({
           displayName,
           genderCode: "unspecified",
+          studentNumber: null,
           isActive: true,
           sortOrder: lastSortOrder + index + 1
         }));
@@ -992,7 +1456,7 @@
 
       studentForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        if (isSavingStudents || isStudentMutation || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
+        if (isSavingStudents || isStudentMutation || isCsvImportSaving || isStudentListLoading || !selectedRoster || !currentSignedInEmail) return;
 
         let students;
         try {
@@ -1058,7 +1522,7 @@
       });
 
       async function setDefaultRoster(roster, button) {
-        if (isRosterMutation || isRosterListLoading || isSavingStudents || isStudentMutation || !currentSignedInEmail || roster.is_default) return;
+        if (isRosterMutation || isRosterListLoading || isSavingStudents || isStudentMutation || isCsvImportSaving || !currentSignedInEmail || roster.is_default) return;
 
         const signedInEmailAtAction = currentSignedInEmail;
         isRosterMutation = true;
@@ -1091,7 +1555,7 @@
       }
 
       async function deleteRoster(roster, button) {
-        if (isRosterMutation || isRosterListLoading || isSavingStudents || isStudentMutation || !currentSignedInEmail) return;
+        if (isRosterMutation || isRosterListLoading || isSavingStudents || isStudentMutation || isCsvImportSaving || !currentSignedInEmail) return;
 
         let confirmationMessage =
           "이 학급을 삭제하시겠습니까?\n학급에 저장된 학생 명단도 함께 삭제되며 되돌릴 수 없습니다.";
@@ -1243,6 +1707,9 @@
 
       reloadRostersButton.addEventListener("click", loadRosters);
       reloadStudentsButton.addEventListener("click", loadStudents);
+      downloadCsvButton.addEventListener("click", downloadCsvBackup);
+      csvFileInput.addEventListener("change", handleCsvFileSelection);
+      importCsvButton.addEventListener("click", importCsvStudents);
 
       signOutButton.addEventListener("click", async () => {
         signOutError.textContent = "";

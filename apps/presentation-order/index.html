@@ -464,17 +464,22 @@
       studentNames.focus();
     }
 
-    function renderOrder(names) {
+    function formatStudentDisplay(student) {
+      if (typeof student === "string") return student;
+      return student.displayName;
+    }
+
+    function renderOrder(students) {
       const list = document.createElement("ol");
 
-      names.forEach((name, index) => {
+      students.forEach((student, index) => {
         const item = document.createElement("li");
         const rank = document.createElement("span");
         const nameText = document.createElement("span");
         rank.className = "rank";
         rank.textContent = `${index + 1}`;
         nameText.className = "name";
-        nameText.textContent = name;
+        nameText.textContent = formatStudentDisplay(student);
         item.append(rank, nameText);
         list.append(item);
       });
@@ -486,7 +491,7 @@
     function createGenderBalancedOrder() {
       const students = loadedRosterStudents.map((student, index) => ({
         id: index,
-        name: student.displayName,
+        displayName: student.displayName,
         genderCode: student.genderCode
       }));
       const maleStudents = shuffle(students.filter((student) => student.genderCode === "male"));
@@ -551,7 +556,7 @@
         throw new Error("발표 순서를 확인하지 못했습니다. 다시 시도해 주세요.");
       }
 
-      return orderedStudents.map((student) => student.name);
+      return orderedStudents;
     }
 
     function drawPresentationOrder() {
@@ -568,11 +573,16 @@
         return;
       }
 
-      let orderedNames;
+      let orderedStudents;
       const usesGenderBalance = !genderBalanceOption.disabled && genderBalanceOption.checked;
+      const usesLoadedRoster = loadedRosterStudents.length > 0 && studentNames.value === loadedRosterText;
 
       try {
-        orderedNames = usesGenderBalance ? createGenderBalancedOrder() : shuffle(names);
+        orderedStudents = usesGenderBalance
+          ? createGenderBalancedOrder()
+          : usesLoadedRoster
+            ? shuffle(loadedRosterStudents)
+            : shuffle(names);
       } catch (error) {
         showError("발표 순서를 확인하지 못했습니다. 다시 시도해 주세요.");
         return;
@@ -586,9 +596,9 @@
       const genderBalanceNotice = usesGenderBalance
         ? " 성별 정보가 입력된 학생을 발표 순서에 가능한 고르게 배치했습니다."
         : "";
-      message.textContent = `총 ${orderedNames.length}명의 발표 순서가 생성되었습니다.${genderBalanceNotice}${duplicateNotice}`;
+      message.textContent = `총 ${orderedStudents.length}명의 발표 순서가 생성되었습니다.${genderBalanceNotice}${duplicateNotice}`;
       hasPresentationOrder = true;
-      renderOrder(orderedNames);
+      renderOrder(orderedStudents);
       resultArea.focus();
     }
 
