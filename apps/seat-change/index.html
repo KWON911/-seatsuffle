@@ -35,6 +35,7 @@
     .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
     button,.button-link { border:1px solid transparent; border-radius:7px; padding:9px 12px; font-weight:800; text-decoration:none; }
     .primary { background:var(--blue); color:white; } .primary:hover { background:var(--blue-dark); }
+    .settings-control { border-color:#0b766e; background:#e6fffa; color:#0b6b64; } .settings-control:hover { background:#c9f7ef; color:#07564f; }
     .secondary { border-color:#c3d1e7; background:#f7faff; color:#244b8e; }
     .ghost { border-color:#d4ddea; background:transparent; color:#526176; }
     .danger { border-color:#e6beb9; background:#fff7f5; color:var(--danger); }
@@ -81,12 +82,7 @@
     .settings { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:18px; }
     .settings .panel { margin:0; box-shadow:none; }
     .settings .panel:nth-child(3), .settings .panel:nth-child(4) { grid-column:span 2; }
-    .bottom-tools { position:sticky; z-index:5; bottom:12px; display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; width:min(880px, calc(100% - 28px)); margin:18px auto 0; padding:9px; border:1px solid #cbd7e8; border-radius:14px; background:rgba(255,255,255,.94); box-shadow:0 12px 28px rgba(21,42,76,.18); backdrop-filter:blur(12px); }
-    .bottom-tools button { min-height:53px; padding:7px; background:#fff; color:#38516f; font-size:.82rem; }
-    .bottom-tools button::before { display:block; margin-bottom:3px; color:var(--blue); font-size:1rem; }
-    .bottom-tools button[data-open="roster"]::before { content:"▦"; } .bottom-tools button[data-open="layout"]::before { content:"▤"; } .bottom-tools button[data-open="rules"]::before { content:"⚑"; } .bottom-tools button[data-open="records"]::before { content:"◫"; }
-    .bottom-tools .primary { background:var(--blue); color:#fff; } .bottom-tools .primary::before { color:#9ffff4; content:"↻"; }
-    @media (max-width:640px) { body { background:linear-gradient(180deg,#13213b 0 175px,var(--canvas) 175px); } main { width:min(100% - 20px, 1440px); padding-top:14px; } header { grid-template-columns:1fr; } .quick-tools { width:100%; } .quick-tools button { flex:1; } .status-pill { width:max-content; } .field-grid { grid-template-columns:1fr; } .panel { padding:16px; } .result-top { display:block; } .result-top .actions { margin-top:14px; } .seat-grid { min-width:330px; gap:7px; } .seat { min-height:58px; padding:6px; } .room { margin:0 12px; padding:14px; } .legend { margin-inline:12px; } .result-top ~ #resultMessage { margin-inline:12px; } .bottom-tools { grid-template-columns:repeat(5, minmax(55px,1fr)); gap:4px; width:calc(100% - 8px); bottom:4px; padding:6px; } .bottom-tools button { min-height:52px; font-size:.69rem; } .settings-modal { align-items:end; padding:0; } .settings-dialog { width:100%; max-height:88vh; border-radius:18px 18px 0 0; } .settings { display:block; padding:12px; } .settings .panel + .panel { margin-top:12px; } .settings .panel:nth-child(3), .settings .panel:nth-child(4) { grid-column:auto; } }
+    @media (max-width:640px) { body { background:linear-gradient(180deg,#13213b 0 175px,var(--canvas) 175px); } main { width:min(100% - 20px, 1440px); padding-top:14px; } header { grid-template-columns:1fr; } .quick-tools { width:100%; } .quick-tools button { flex:1; } .status-pill { width:max-content; } .field-grid { grid-template-columns:1fr; } .panel { padding:16px; } .result-top { display:block; } .result-top .actions { margin-top:14px; } .seat-grid { min-width:330px; gap:7px; } .seat { min-height:58px; padding:6px; } .room { margin:0 12px; padding:14px; } .legend { margin-inline:12px; } .result-top ~ #resultMessage { margin-inline:12px; } .settings-modal { align-items:end; padding:0; } .settings-dialog { width:100%; max-height:88vh; border-radius:18px 18px 0 0; } .settings { display:block; padding:12px; } .settings .panel + .panel { margin-top:12px; } .settings .panel:nth-child(3), .settings .panel:nth-child(4) { grid-column:auto; } }
     @media print { body { background:white; } main { width:100%; padding:0; } .back,header,.settings,.actions,.records,.legend,.hint,.message,.status-pill,.screen-only { display:none !important; } .layout { display:block; } .workspace .panel { border:0; box-shadow:none; padding:0; } .room { border:0; padding:0; background:white; overflow:visible; } .seat-grid { min-width:0; } .seat { break-inside:avoid; } .print-only { display:block; } }
   </style>
 </head>
@@ -95,18 +91,11 @@
     <a class="back screen-only" href="../">← 웹앱 모음으로 돌아가기</a>
     <header>
       <div><h1><span>자리</span>바꾸기</h1><p class="intro">자리 배치부터 기록까지, 교실 운영에 필요한 작업을 한 화면에서 처리합니다.</p></div>
-      <div class="quick-tools screen-only" aria-label="빠른 도구"><span class="status-pill" id="rosterLabel">학급 명단을 불러와 주세요</span><button type="button" data-proxy="save">저장</button><button type="button" data-proxy="records">목록</button><button type="button" data-proxy="print">인쇄</button></div>
+      <div class="quick-tools screen-only" aria-label="빠른 도구"><span class="status-pill" id="rosterLabel">학급 명단을 불러와 주세요</span><button type="button" data-proxy="print">인쇄</button></div>
     </header>
     <div class="layout">
-      <section class="workspace"><section class="panel" aria-labelledby="resultTitle"><div class="result-top"><div><h2 id="resultTitle">우리 반 자리 배치</h2><p class="hint" id="viewDescription">현재: 교사 시점 — 교탁에서 학생을 바라보는 모습입니다.</p></div><div class="actions screen-only"><button class="primary" id="generate" type="button">자리 배치 시작</button><button class="secondary" id="reshuffle" type="button">재배치하기</button><button class="ghost" id="clearResult" type="button">초기화</button><button class="secondary" id="print" type="button">인쇄</button></div></div><p class="message error" id="errorMessage" role="alert" hidden></p><div class="legend screen-only"><span><i class="dot"></i>사용 가능</span><span><i class="dot fixed"></i>학생 고정</span><span><i class="dot male"></i>남학생 자리</span><span><i class="dot female"></i>여학생 자리</span><span><i class="dot empty"></i>빈자리</span><span><i class="dot disabled"></i>사용 안 함</span></div><p class="print-only" id="printTitle"></p><div class="room" id="room"><div class="teacher-desk">교 탁</div><div id="seatGrid" class="seat-grid" aria-label="자리표"></div><div class="room-edge"><span>창가 쪽</span><span>복도 쪽</span></div></div><p class="message" id="resultMessage" role="status">학급 명단을 불러온 뒤 자리 배치 시작을 눌러 주세요.</p></section></section>
+      <section class="workspace"><section class="panel" aria-labelledby="resultTitle"><div class="result-top"><div><h2 id="resultTitle">우리 반 자리 배치</h2><p class="hint" id="viewDescription">현재: 교사 시점 — 교탁에서 학생을 바라보는 모습입니다.</p></div><div class="actions screen-only"><button class="settings-control" id="openSettings" type="button">설정</button><button class="primary" id="generate" type="button">자리 배치 시작</button><button class="secondary" id="reshuffle" type="button">재배치하기</button><button class="ghost" id="clearResult" type="button">초기화</button><button class="secondary" id="print" type="button">인쇄</button></div></div><p class="message error" id="errorMessage" role="alert" hidden></p><div class="legend screen-only"><span><i class="dot"></i>사용 가능</span><span><i class="dot fixed"></i>학생 고정</span><span><i class="dot male"></i>남학생 자리</span><span><i class="dot female"></i>여학생 자리</span><span><i class="dot empty"></i>빈자리</span><span><i class="dot disabled"></i>사용 안 함</span></div><p class="print-only" id="printTitle"></p><div class="room" id="room"><div class="teacher-desk">교 탁</div><div id="seatGrid" class="seat-grid" aria-label="자리표"></div><div class="room-edge"><span>창가 쪽</span><span>복도 쪽</span></div></div><p class="message" id="resultMessage" role="status">학급 명단을 불러온 뒤 자리 배치 시작을 눌러 주세요.</p></section></section>
     </div>
-    <nav class="bottom-tools screen-only" aria-label="자리바꾸기 도구">
-      <button type="button" data-open="roster">학급 명단</button>
-      <button type="button" data-open="layout">좌석 설정</button>
-      <button type="button" data-open="rules">조건 설정</button>
-      <button type="button" data-open="records">저장·기록</button>
-      <button class="primary" id="bottomReshuffle" type="button">재배치하기</button>
-    </nav>
     <section class="settings-modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle" hidden>
       <div class="settings-dialog">
         <div class="settings-dialog-head"><div><h2 id="settingsModalTitle">자리바꾸기 설정</h2><p id="settingsModalDescription">필요한 항목을 설정한 뒤 닫으면 자리표 화면으로 돌아갑니다.</p></div><button id="closeSettings" type="button" aria-label="설정 창 닫기">✕</button></div>
@@ -174,6 +163,7 @@
     const settingsTitle = $("#settingsModalTitle");
     const settingsDescription = $("#settingsModalDescription");
     const settingsCopy = {
+      all: ["설정", "학급 명단, 좌석 설정, 조건 설정, 저장·기록을 한 곳에서 관리합니다.", "#rosterTitle"],
       roster: ["학급 명단", "기본 학급을 불러오거나 명단 관리 화면으로 이동할 수 있습니다.", "#rosterTitle"],
       layout: ["좌석 설정", "행·열, 교탁 방향, 보기 방향과 빈자리를 설정합니다.", "#layoutTitle"],
       rules: ["조건 설정", "자리 고정, 분리 설정, 성별 고려 배치를 관리합니다.", "#conditionTitle"],
@@ -194,10 +184,9 @@
         if (target) target.click();
       });
     });
-    document.querySelectorAll("[data-open]").forEach((button) => button.addEventListener("click", () => openSettings(button.dataset.open)));
+    $("#openSettings").addEventListener("click", () => openSettings("all"));
     $("#closeSettings").addEventListener("click", closeSettings);
     settingsModal.addEventListener("click", (event) => { if (event.target === settingsModal) closeSettings(); });
-    $("#bottomReshuffle").addEventListener("click", () => el.reshuffle.click());
     document.addEventListener("keydown", (event) => { if (event.key !== "Escape") return; if (!settingsModal.hidden) closeSettings(); else if (seatTool) { seatTool=null;el.resultMessage.textContent="직접 좌석 지정을 마쳤습니다."; } });
     render();
   })();
