@@ -5,35 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>자리바꾸기 | 권쌤의 교실</title>
   <style>
-    :root { --ink:#18333c; --muted:#62777d; --paper:#f6f4ed; --panel:#fffefa; --line:#d5dfda; --blue:#16697a; --blue-dark:#104b58; --blue-soft:#e2f1ef; --sun:#f5b845; --danger:#a43e3e; --shadow:0 16px 35px rgba(22, 64, 69, .1); }
+    :root { --ink:#14233c; --muted:#607086; --canvas:#eef2f8; --panel:#ffffff; --line:#d9e1ec; --blue:#1d4ed8; --blue-dark:#173b9e; --teal:#0d9488; --sun:#ffbc42; --danger:#c44343; --shadow:0 14px 34px rgba(23, 46, 91, .09); }
     * { box-sizing:border-box; }
-    body { margin:0; color:var(--ink); background:radial-gradient(circle at 8% 0%, #dcefed 0, transparent 25rem), var(--paper); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    body { margin:0; color:var(--ink); background:linear-gradient(180deg,#13213b 0 210px,var(--canvas) 210px); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     button,input,select { font:inherit; }
     button { cursor:pointer; }
     button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid #f2b546; outline-offset:2px; }
-    main { width:min(1180px, calc(100% - 32px)); margin:auto; padding:28px 0 56px; }
-    .back { color:var(--blue-dark); text-decoration:none; font-weight:700; }
-    header { display:flex; justify-content:space-between; align-items:end; gap:24px; margin:32px 0 24px; }
-    h1 { margin:0; font-size:clamp(2rem, 5vw, 3.25rem); letter-spacing:-.06em; }
-    h1 span { color:var(--blue); }
-    .intro { max-width:530px; margin:10px 0 0; color:var(--muted); line-height:1.7; }
-    .status-pill { border:1px solid #b9d4cf; border-radius:999px; background:#eff8f6; color:var(--blue-dark); padding:8px 12px; font-size:.88rem; font-weight:700; white-space:nowrap; }
-    .layout { display:grid; grid-template-columns:minmax(280px, .83fr) minmax(480px, 1.45fr); gap:20px; align-items:start; }
-    .panel { border:1px solid var(--line); border-radius:18px; padding:22px; background:var(--panel); box-shadow:var(--shadow); }
-    .panel + .panel { margin-top:20px; }
-    h2 { margin:0; font-size:1.16rem; } h3 { margin:0; font-size:1rem; }
+    main { width:min(1440px, calc(100% - 32px)); margin:auto; padding:18px 0 52px; }
+    .back { color:#bdcbe5; text-decoration:none; font-size:.86rem; font-weight:700; }
+    header { display:grid; grid-template-columns:1fr auto; gap:18px; align-items:center; margin:18px 0 24px; color:white; }
+    h1 { margin:0; font-size:clamp(1.7rem, 3vw, 2.45rem); letter-spacing:-.06em; }
+    h1 span { color:#78e0d4; }
+    .intro { max-width:620px; margin:7px 0 0; color:#bac8de; line-height:1.6; font-size:.94rem; }
+    .status-pill { border:1px solid rgba(180,213,255,.35); border-radius:999px; background:rgba(255,255,255,.1); color:#e6f0ff; padding:8px 12px; font-size:.82rem; font-weight:700; white-space:nowrap; }
+    .quick-tools { display:flex; align-items:center; gap:8px; }
+    .quick-tools button { min-width:70px; background:#263b60; border:1px solid #496184; color:#fff; }
+    .quick-tools button:hover { background:#34527f; }
+    .layout { display:block; }
+    .panel { border:1px solid var(--line); border-radius:14px; padding:18px; background:var(--panel); box-shadow:var(--shadow); }
+    .panel + .panel { margin-top:14px; }
+    h2 { margin:0; font-size:1rem; } h3 { margin:0; font-size:1rem; }
     .hint,.message { margin:7px 0 0; color:var(--muted); font-size:.9rem; line-height:1.55; }
     .message { min-height:1.5em; } .message.error { color:var(--danger); font-weight:700; }
-    .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
-    label { display:grid; gap:6px; color:#35535b; font-weight:700; font-size:.9rem; }
-    input,select { width:100%; border:1px solid #b9cbc7; border-radius:9px; background:white; padding:9px 10px; color:var(--ink); }
+    .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+    label { display:grid; gap:6px; color:#40516b; font-weight:700; font-size:.84rem; }
+    input,select { width:100%; border:1px solid #cbd5e5; border-radius:7px; background:#fbfcff; padding:9px 10px; color:var(--ink); }
     input[type="checkbox"] { width:18px; height:18px; accent-color:var(--blue); }
     .check { display:flex; align-items:center; gap:8px; margin-top:14px; cursor:pointer; }
     .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
-    button,.button-link { border:1px solid transparent; border-radius:9px; padding:9px 12px; font-weight:800; text-decoration:none; }
+    button,.button-link { border:1px solid transparent; border-radius:7px; padding:9px 12px; font-weight:800; text-decoration:none; }
     .primary { background:var(--blue); color:white; } .primary:hover { background:var(--blue-dark); }
-    .secondary { border-color:#9abdb7; background:#f7fcfa; color:var(--blue-dark); }
-    .ghost { border-color:var(--line); background:transparent; color:#4f666b; }
+    .secondary { border-color:#c3d1e7; background:#f7faff; color:#244b8e; }
+    .ghost { border-color:#d4ddea; background:transparent; color:#526176; }
     .danger { border-color:#e6beb9; background:#fff7f5; color:var(--danger); }
     .section-rule { margin:20px 0; border:0; border-top:1px solid var(--line); }
     .condition-row { display:grid; grid-template-columns:1fr auto; gap:8px; padding:10px 0; border-bottom:1px dashed #d9e1dc; }
@@ -41,30 +44,49 @@
     .condition-row p { margin:2px 0 0; color:var(--muted); font-size:.84rem; }
     .condition-row button { align-self:center; padding:6px 8px; font-size:.82rem; }
     .workspace { min-width:0; }
-    .result-top { display:flex; justify-content:space-between; align-items:start; gap:16px; }
-    .legend { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; color:var(--muted); font-size:.8rem; }
+    .workspace > .panel:first-child { padding:0; overflow:hidden; border-radius:14px; }
+    .result-top { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px 20px; border-bottom:1px solid var(--line); background:#f9fbff; }
+    .result-top h2::before { content:"배치 보드"; display:block; margin-bottom:3px; color:#71809a; font-size:.68rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .legend { display:flex; flex-wrap:wrap; gap:8px; margin:14px 20px; color:var(--muted); font-size:.8rem; }
     .legend span { display:inline-flex; align-items:center; gap:5px; }
     .dot { width:11px; height:11px; border:1px solid #9baea9; border-radius:3px; background:#fff; } .dot.fixed { background:#d8edca; border-color:#72a75a; } .dot.empty { background:#f4ebcd; border-color:#cfaf5d; } .dot.disabled { background:#d9dddd; }
-    .room { overflow:auto; border:1px solid #c9d8d3; border-radius:15px; padding:18px; background:linear-gradient(135deg,#eef7f3,#f9faf4); }
+    .room { overflow:auto; margin:0 20px; border:1px solid #cbd8e6; border-radius:10px; padding:24px; background:radial-gradient(circle at 3px 3px,#dae4ef 1px,transparent 1.5px) 0 0/18px 18px,#f5f8fc; }
     .room.desk-south { display:flex; flex-direction:column; }
     .room.desk-south .teacher-desk { order:2; margin:18px auto 0; }
     .room.desk-south .seat-grid { order:1; width:100%; }
     .room.desk-south .room-edge { order:3; width:100%; }
-    .teacher-desk { width:min(230px, 70%); margin:0 auto 18px; border:2px solid #ce9634; border-radius:7px; background:#ffedbd; color:#76551a; padding:8px; text-align:center; font-weight:900; font-size:.9rem; }
-    .seat-grid { display:grid; gap:9px; min-width:400px; }
-    .seat { min-height:67px; border:1px solid #9bbab2; border-radius:9px; background:#fff; padding:7px; color:var(--ink); text-align:left; position:relative; display:flex; flex-direction:column; justify-content:space-between; }
-    .seat.available:hover { border-color:var(--blue); transform:translateY(-1px); } .seat.selected { box-shadow:0 0 0 3px var(--sun); }
-    .seat.disabled { border-style:dashed; background:#e4e7e6; color:#6e7978; } .seat.empty { background:#fff8df; border-color:#d5b66b; } .seat.fixed { background:#eff9e9; border-color:#7aa961; }
-    .seat small { color:#557076; font-size:.72rem; } .seat strong { overflow-wrap:anywhere; font-size:.96rem; }
+    .teacher-desk { width:min(260px, 70%); margin:0 auto 24px; border:0; border-radius:5px; background:#223a61; color:#fff; padding:10px; text-align:center; font-weight:900; font-size:.82rem; letter-spacing:.1em; }
+    .seat-grid { display:grid; gap:11px; min-width:400px; }
+    .seat { min-height:70px; border:1px solid #aebcd2; border-radius:6px; background:#fff; padding:8px; color:var(--ink); text-align:left; position:relative; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 2px 0 rgba(24,50,86,.06); }
+    .seat.available:hover { border-color:var(--blue); transform:translateY(-2px); box-shadow:0 5px 10px rgba(29,78,216,.13); } .seat.selected { box-shadow:0 0 0 3px var(--sun); }
+    .seat.disabled { border-style:dashed; background:#e1e6ed; color:#6e7988; } .seat.empty { background:#fff4d5; border-color:#e1bc63; } .seat.fixed { background:#e8faf2; border-color:#58af86; }
+    .seat small { color:#71809a; font-size:.68rem; } .seat strong { overflow-wrap:anywhere; font-size:.96rem; }
     .seat .lock { position:absolute; right:6px; top:5px; font-size:.75rem; } .empty-label { font-size:.84rem; color:#8b6c26; }
-    .room-edge { display:flex; justify-content:space-between; color:#617a7d; font-size:.75rem; margin-top:10px; }
-    .records { margin-top:20px; } .record-list { list-style:none; padding:0; margin:14px 0 0; display:grid; gap:8px; }
+    .room-edge { display:flex; justify-content:space-between; color:#71809a; font-size:.75rem; margin-top:12px; }
+    .result-top + .message.error { margin:12px 20px 0; }
+    .result-top ~ #resultMessage { margin:12px 20px 18px; padding:10px 12px; border-left:3px solid var(--teal); background:#f0fdfa; }
+    .records { margin-top:18px; } .record-list { list-style:none; padding:0; margin:14px 0 0; display:grid; gap:8px; }
     .record { display:flex; justify-content:space-between; align-items:center; gap:12px; border:1px solid var(--line); border-radius:10px; padding:10px; background:#fff; }
     .record-title { margin:0; font-weight:800; } .record time { color:var(--muted); font-size:.84rem; }
     .record-actions { display:flex; flex-wrap:wrap; gap:6px; } .record-actions button { padding:6px 8px; font-size:.8rem; }
     .print-only { display:none; }
-    @media (max-width:900px) { .layout { grid-template-columns:1fr; } .settings { display:grid; grid-template-columns:1fr 1fr; gap:16px; } .settings .panel + .panel { margin-top:0; } }
-    @media (max-width:600px) { main { width:min(100% - 20px, 1180px); padding-top:18px; } header,.result-top { display:block; } .status-pill { display:inline-block; margin-top:14px; } .settings { display:block; } .settings .panel + .panel { margin-top:16px; } .field-grid { grid-template-columns:1fr; } .panel { padding:17px; border-radius:14px; } .seat-grid { min-width:330px; gap:6px; } .seat { min-height:58px; padding:6px; } }
+    .settings > .panel::before { display:block; margin-bottom:10px; color:var(--blue); font-size:.69rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    .settings > .panel:nth-child(1)::before { content:"Roster"; } .settings > .panel:nth-child(2)::before { content:"Layout"; } .settings > .panel:nth-child(3)::before { content:"Rules"; } .settings > .panel:nth-child(4)::before { content:"Archive"; }
+    .settings-modal[hidden] { display:none; }
+    .settings-modal { position:fixed; z-index:20; inset:0; display:grid; place-items:center; padding:24px; background:rgba(10,22,45,.56); }
+    .settings-dialog { width:min(860px, 100%); max-height:min(780px, calc(100vh - 48px)); overflow:auto; border-radius:16px; background:#f3f6fb; box-shadow:0 24px 60px rgba(8,19,42,.32); }
+    .settings-dialog-head { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); background:white; }
+    .settings-dialog-head p { margin:3px 0 0; color:var(--muted); font-size:.84rem; }
+    .settings-dialog-head button { min-width:40px; padding:8px; background:#edf2f9; color:#31425e; }
+    .settings { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:18px; }
+    .settings .panel { margin:0; box-shadow:none; }
+    .settings .panel:nth-child(3), .settings .panel:nth-child(4) { grid-column:span 2; }
+    .bottom-tools { position:sticky; z-index:5; bottom:12px; display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; width:min(880px, calc(100% - 28px)); margin:18px auto 0; padding:9px; border:1px solid #cbd7e8; border-radius:14px; background:rgba(255,255,255,.94); box-shadow:0 12px 28px rgba(21,42,76,.18); backdrop-filter:blur(12px); }
+    .bottom-tools button { min-height:53px; padding:7px; background:#fff; color:#38516f; font-size:.82rem; }
+    .bottom-tools button::before { display:block; margin-bottom:3px; color:var(--blue); font-size:1rem; }
+    .bottom-tools button[data-open="roster"]::before { content:"▦"; } .bottom-tools button[data-open="layout"]::before { content:"▤"; } .bottom-tools button[data-open="rules"]::before { content:"⚑"; } .bottom-tools button[data-open="records"]::before { content:"◫"; }
+    .bottom-tools .primary { background:var(--blue); color:#fff; } .bottom-tools .primary::before { color:#9ffff4; content:"↻"; }
+    @media (max-width:640px) { body { background:linear-gradient(180deg,#13213b 0 175px,var(--canvas) 175px); } main { width:min(100% - 20px, 1440px); padding-top:14px; } header { grid-template-columns:1fr; } .quick-tools { width:100%; } .quick-tools button { flex:1; } .status-pill { width:max-content; } .field-grid { grid-template-columns:1fr; } .panel { padding:16px; } .result-top { display:block; } .result-top .actions { margin-top:14px; } .seat-grid { min-width:330px; gap:7px; } .seat { min-height:58px; padding:6px; } .room { margin:0 12px; padding:14px; } .legend { margin-inline:12px; } .result-top ~ #resultMessage { margin-inline:12px; } .bottom-tools { grid-template-columns:repeat(5, minmax(55px,1fr)); gap:4px; width:calc(100% - 8px); bottom:4px; padding:6px; } .bottom-tools button { min-height:52px; font-size:.69rem; } .settings-modal { align-items:end; padding:0; } .settings-dialog { width:100%; max-height:88vh; border-radius:18px 18px 0 0; } .settings { display:block; padding:12px; } .settings .panel + .panel { margin-top:12px; } .settings .panel:nth-child(3), .settings .panel:nth-child(4) { grid-column:auto; } }
     @media print { body { background:white; } main { width:100%; padding:0; } .back,header,.settings,.actions,.records,.legend,.hint,.message,.status-pill,.screen-only { display:none !important; } .layout { display:block; } .workspace .panel { border:0; box-shadow:none; padding:0; } .room { border:0; padding:0; background:white; overflow:visible; } .seat-grid { min-width:0; } .seat { break-inside:avoid; } .print-only { display:block; } }
   </style>
 </head>
@@ -72,18 +94,30 @@
   <main>
     <a class="back screen-only" href="../">← 웹앱 모음으로 돌아가기</a>
     <header>
-      <div><h1><span>자리</span>바꾸기</h1><p class="intro">교실 좌석을 차분하게 정리하고, 필요한 조건을 지키며 새 자리를 만들어 보세요.</p></div>
-      <span class="status-pill" id="rosterLabel">학급 명단을 불러와 주세요</span>
+      <div><h1><span>자리</span>바꾸기</h1><p class="intro">자리 배치부터 기록까지, 교실 운영에 필요한 작업을 한 화면에서 처리합니다.</p></div>
+      <div class="quick-tools screen-only" aria-label="빠른 도구"><span class="status-pill" id="rosterLabel">학급 명단을 불러와 주세요</span><button type="button" data-proxy="save">저장</button><button type="button" data-proxy="records">목록</button><button type="button" data-proxy="print">인쇄</button></div>
     </header>
     <div class="layout">
-      <aside class="settings">
+      <section class="workspace"><section class="panel" aria-labelledby="resultTitle"><div class="result-top"><div><h2 id="resultTitle">우리 반 자리 배치</h2><p class="hint" id="viewDescription">현재: 교사 시점 — 교탁에서 학생을 바라보는 모습입니다.</p></div><div class="actions screen-only"><button class="primary" id="generate" type="button">자리 배치 시작</button><button class="secondary" id="reshuffle" type="button">재배치하기</button><button class="ghost" id="clearResult" type="button">초기화</button><button class="secondary" id="print" type="button">인쇄</button></div></div><p class="message error" id="errorMessage" role="alert" hidden></p><div class="legend screen-only"><span><i class="dot"></i>사용 가능</span><span><i class="dot fixed"></i>고정</span><span><i class="dot empty"></i>빈자리</span><span><i class="dot disabled"></i>사용 안 함</span></div><p class="print-only" id="printTitle"></p><div class="room" id="room"><div class="teacher-desk">교 탁</div><div id="seatGrid" class="seat-grid" aria-label="자리표"></div><div class="room-edge"><span>창가 쪽</span><span>복도 쪽</span></div></div><p class="message" id="resultMessage" role="status">학급 명단을 불러온 뒤 자리 배치 시작을 눌러 주세요.</p></section></section>
+    </div>
+    <nav class="bottom-tools screen-only" aria-label="자리바꾸기 도구">
+      <button type="button" data-open="roster">학급 명단</button>
+      <button type="button" data-open="layout">좌석 설정</button>
+      <button type="button" data-open="rules">조건 설정</button>
+      <button type="button" data-open="records">저장·기록</button>
+      <button class="primary" id="bottomReshuffle" type="button">재배치하기</button>
+    </nav>
+    <section class="settings-modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle" hidden>
+      <div class="settings-dialog">
+        <div class="settings-dialog-head"><div><h2 id="settingsModalTitle">자리바꾸기 설정</h2><p id="settingsModalDescription">필요한 항목을 설정한 뒤 닫으면 자리표 화면으로 돌아갑니다.</p></div><button id="closeSettings" type="button" aria-label="설정 창 닫기">✕</button></div>
+        <aside class="settings">
         <section class="panel" aria-labelledby="rosterTitle"><h2 id="rosterTitle">1. 학급 명단</h2><p class="hint">저장된 기본 학급을 불러오면 학생별 고정·분리 조건을 안전하게 연결합니다.</p><div class="actions"><button class="primary" id="loadRoster" type="button">기본 학급 불러오기</button><a class="button-link secondary" href="../../account/">명단 관리</a></div><p class="message" id="rosterMessage" role="status">로그인 후 기본 학급을 불러올 수 있습니다.</p></section>
         <section class="panel" aria-labelledby="layoutTitle"><h2 id="layoutTitle">2. 교실과 보기 방향</h2><div class="field-grid"><label>행 <input id="rows" type="number" min="1" max="12" value="5"></label><label>열 <input id="columns" type="number" min="1" max="12" value="6"></label><label>교탁 방향 <select id="teacherDirection"><option value="north">위쪽</option><option value="south">아래쪽</option></select></label><label>보기 방향 <select id="viewMode"><option value="teacher">앞에서 볼 때 (교사 시점)</option><option value="back">뒤에서 볼 때</option></select></label></div><div class="actions"><button class="secondary" id="applyLayout" type="button">좌석 구조 적용</button><button class="ghost" id="seatMode" type="button" data-mode="empty">빈자리 지정</button></div><p class="message" id="layoutMessage" role="status">좌석을 눌러 빈자리 또는 사용하지 않는 자리로 바꿀 수 있습니다.</p></section>
         <section class="panel" aria-labelledby="conditionTitle"><h2 id="conditionTitle">3. 조건 설정</h2><p class="hint">조건은 관리자용 설정이며, 자리표와 인쇄물에는 표시되지 않습니다.</p><div class="field-grid"><label>학생 <select id="fixedStudent"><option value="">학급 명단을 먼저 불러와 주세요</option></select></label><label>고정할 좌석 <select id="fixedSeat"><option value="">좌석을 선택해 주세요</option></select></label></div><div class="actions"><button class="secondary" id="addFixed" type="button">자리 고정 추가</button></div><hr class="section-rule"><div class="field-grid"><label>학생 A <select id="separationA"><option value="">학생 선택</option></select></label><label>학생 B <select id="separationB"><option value="">학생 선택</option></select></label><label>분리 수준 <select id="separationType"><option value="orthogonal">앞뒤·좌우 인접 금지</option><option value="diagonal">대각선 포함 인접 금지</option></select></label></div><div class="actions"><button class="secondary" id="addSeparation" type="button">분리 설정 추가</button></div><label class="check"><input id="genderBalance" type="checkbox" disabled> 성별을 고려해 가능한 고르게 배치</label><p class="message" id="conditionMessage" role="status">명단을 불러온 뒤 조건을 설정할 수 있습니다.</p><div id="conditionList" aria-live="polite"></div></section>
-        <section class="panel" aria-labelledby="saveTitle"><h2 id="saveTitle">4. 저장과 기록</h2><div class="field-grid"><label>제목 <input id="planTitle" maxlength="80" placeholder="예: 2026년 7월 1차 자리표"></label><label>날짜 <input id="planDate" type="date"></label><label>기록 월 <input id="recordMonth" type="month"></label></div><div class="actions"><button class="primary" id="savePlan" type="button">현재 자리표 저장</button><button class="secondary" id="loadRecords" type="button">기록 불러오기</button></div><p class="message" id="saveMessage" role="status">자리 배치 후 저장할 수 있습니다.</p></section>
-      </aside>
-      <section class="workspace"><section class="panel" aria-labelledby="resultTitle"><div class="result-top"><div><h2 id="resultTitle">자리표 미리보기</h2><p class="hint" id="viewDescription">현재: 교사 시점 — 교탁에서 학생을 바라보는 모습입니다.</p></div><div class="actions screen-only"><button class="primary" id="generate" type="button">자리 배치하기</button><button class="secondary" id="reshuffle" type="button">조건 유지하고 다시 섞기</button><button class="ghost" id="clearResult" type="button">초기화</button><button class="secondary" id="print" type="button">인쇄</button></div></div><p class="message error" id="errorMessage" role="alert" hidden></p><div class="legend screen-only"><span><i class="dot"></i>사용 가능</span><span><i class="dot fixed"></i>고정</span><span><i class="dot empty"></i>빈자리</span><span><i class="dot disabled"></i>사용 안 함</span></div><p class="print-only" id="printTitle"></p><div class="room" id="room"><div class="teacher-desk">교탁</div><div id="seatGrid" class="seat-grid" aria-label="자리표"></div><div class="room-edge"><span>창가</span><span>복도</span></div></div><p class="message" id="resultMessage" role="status">학급 명단을 불러온 뒤 자리 배치하기를 눌러 주세요.</p></section><section class="panel records" aria-labelledby="recordsTitle"><h2 id="recordsTitle">저장된 자리표</h2><p class="hint">같은 달에 여러 자리표를 저장할 수 있습니다. 불러오기는 현재 화면을 저장본으로 바꿉니다.</p><ul class="record-list" id="recordList"><li class="message">저장된 자리표를 불러오면 여기에 표시됩니다.</li></ul></section></section>
-    </div>
+        <section class="panel" aria-labelledby="saveTitle"><h2 id="saveTitle">4. 저장과 기록</h2><div class="field-grid"><label>제목 <input id="planTitle" maxlength="80" placeholder="예: 2026년 7월 1차 자리표"></label><label>날짜 <input id="planDate" type="date"></label><label>기록 월 <input id="recordMonth" type="month"></label></div><div class="actions"><button class="primary" id="savePlan" type="button">현재 자리표 저장</button><button class="secondary" id="loadRecords" type="button">기록 불러오기</button></div><p class="message" id="saveMessage" role="status">자리 배치 후 저장할 수 있습니다.</p><section class="records" aria-labelledby="recordsTitle"><h2 id="recordsTitle">자리바꾸기 목록</h2><p class="hint">같은 달에 여러 자리표를 저장할 수 있습니다.</p><ul class="record-list" id="recordList"><li class="message">저장된 자리표를 불러오면 여기에 표시됩니다.</li></ul></section></section>
+        </aside>
+      </div>
+    </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../../shared/supabase-config.js"></script><script src="../../shared/supabase-client.js"></script><script src="../../shared/auth.js"></script><script src="../../shared/roster-service.js"></script><script src="../../shared/seating-service.js"></script>
   <script>
@@ -132,7 +166,36 @@
     async function restorePlan(id, copy=false){try{const plan=await window.kwonClassSeatingService.getPlan(id);if(plan.roster_id!==roster.id)throw new Error("현재 학급의 자리표만 불러올 수 있습니다.");const config=plan.layout_config||{};if(!config.seats)throw new Error("저장된 좌석 구조를 읽을 수 없습니다.");layout=config;el.rows.value=layout.rows;el.columns.value=layout.columns;el.direction.value=plan.teacher_direction||"north";el.gender.checked=config.genderBalance===true;assignments=new Map(plan.assignments.map(a=>[a.student_id,a.seat_id]));fixed=new Map(plan.assignments.filter(a=>a.is_fixed).map(a=>[a.student_id,a.seat_id]));separations=plan.constraints.filter(c=>c.constraint_type.startsWith("separate_")).map(c=>({a:c.student_id,b:c.related_student_id,type:c.constraint_type==="separate_diagonal"?"diagonal":"orthogonal"}));savedPlanId=copy?null:id;el.title.value=copy?`${plan.title} 복제`:plan.title;el.date.value=copy?today:plan.plan_date;previousAssignments=new Map(assignments);el.resultMessage.textContent=copy?"자리표를 복제했습니다. 제목이나 조건을 수정한 뒤 새로 저장하세요.":"저장된 자리표를 불러왔습니다.";render();}catch(error){el.saveMessage.textContent=error.message||"자리표를 불러오지 못했습니다.";}}
     function duplicatePlan(id){restorePlan(id,true);}
     async function removePlan(id){if(!confirm("이 자리표를 삭제할까요? 삭제한 기록은 되돌릴 수 없습니다."))return;try{await window.kwonClassSeatingService.deletePlan(id);if(savedPlanId===id)savedPlanId=null;await loadRecords();el.saveMessage.textContent="자리표를 삭제했습니다.";}catch(error){el.saveMessage.textContent=error.message||"자리표를 삭제하지 못했습니다.";}}
-    el.loadRoster.addEventListener("click",loadRoster);el.applyLayout.addEventListener("click",applyLayout);el.view.addEventListener("change",render);el.direction.addEventListener("change",render);el.seatMode.addEventListener("click",()=>{selectedMode=selectedMode==="empty"?"disabled":"empty";el.seatMode.dataset.mode=selectedMode;el.seatMode.textContent=selectedMode==="empty"?"빈자리 지정":"사용 안 함 지정";el.layoutMessage.textContent=selectedMode==="empty"?"좌석을 누르면 빈자리로 바뀝니다.":"좌석을 누르면 사용하지 않는 자리로 바뀝니다.";});el.addFixed.addEventListener("click",addFixed);el.addSeparation.addEventListener("click",addSeparation);el.generate.addEventListener("click",generate);el.reshuffle.addEventListener("click",generate);el.clear.addEventListener("click",()=>{assignments.clear();savedPlanId=null;el.resultMessage.textContent="현재 배치를 초기화했습니다.";render();});el.save.addEventListener("click",savePlan);el.loadRecords.addEventListener("click",loadRecords);el.print.addEventListener("click",()=>{el.printTitle.textContent=`${el.title.value||"자리표"} · ${el.date.value}`;window.print();});render();
+    const settingsModal = $("#settingsModal");
+    const settingsTitle = $("#settingsModalTitle");
+    const settingsDescription = $("#settingsModalDescription");
+    const settingsCopy = {
+      roster: ["학급 명단", "기본 학급을 불러오거나 명단 관리 화면으로 이동할 수 있습니다.", "#rosterTitle"],
+      layout: ["좌석 설정", "행·열, 교탁 방향, 보기 방향과 빈자리를 설정합니다.", "#layoutTitle"],
+      rules: ["조건 설정", "자리 고정, 분리 설정, 성별 고려 배치를 관리합니다.", "#conditionTitle"],
+      records: ["저장·기록", "현재 자리표를 저장하고 월별 기록을 불러옵니다.", "#saveTitle"]
+    };
+    function openSettings(section) {
+      const [title, description, selector] = settingsCopy[section] || settingsCopy.roster;
+      settingsTitle.textContent = title;
+      settingsDescription.textContent = description;
+      settingsModal.hidden = false;
+      requestAnimationFrame(() => $(selector)?.closest(".panel")?.scrollIntoView({ block: "start" }));
+    }
+    function closeSettings() { settingsModal.hidden = true; }
+    el.loadRoster.addEventListener("click",loadRoster);el.applyLayout.addEventListener("click",applyLayout);el.view.addEventListener("change",render);el.direction.addEventListener("change",render);el.seatMode.addEventListener("click",()=>{selectedMode=selectedMode==="empty"?"disabled":"empty";el.seatMode.dataset.mode=selectedMode;el.seatMode.textContent=selectedMode==="empty"?"빈자리 지정":"사용 안 함 지정";el.layoutMessage.textContent=selectedMode==="empty"?"좌석을 누르면 빈자리로 바뀝니다.":"좌석을 누르면 사용하지 않는 자리로 바뀝니다.";});el.addFixed.addEventListener("click",addFixed);el.addSeparation.addEventListener("click",addSeparation);el.generate.addEventListener("click",generate);el.reshuffle.addEventListener("click",generate);el.clear.addEventListener("click",()=>{assignments.clear();savedPlanId=null;el.resultMessage.textContent="현재 배치를 초기화했습니다.";render();});el.save.addEventListener("click",savePlan);el.loadRecords.addEventListener("click",loadRecords);el.print.addEventListener("click",()=>{el.printTitle.textContent=`${el.title.value||"자리표"} · ${el.date.value}`;window.print();});
+    document.querySelectorAll("[data-proxy]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = { save: el.save, records: el.loadRecords, print: el.print }[button.dataset.proxy];
+        if (target) target.click();
+      });
+    });
+    document.querySelectorAll("[data-open]").forEach((button) => button.addEventListener("click", () => openSettings(button.dataset.open)));
+    $("#closeSettings").addEventListener("click", closeSettings);
+    settingsModal.addEventListener("click", (event) => { if (event.target === settingsModal) closeSettings(); });
+    $("#bottomReshuffle").addEventListener("click", () => el.reshuffle.click());
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !settingsModal.hidden) closeSettings(); });
+    render();
   })();
   </script>
 </body>
