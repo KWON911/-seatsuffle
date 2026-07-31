@@ -19,7 +19,7 @@
     }
 
     if (source.includes("provider") || source.includes("disabled") || source.includes("not enabled")) {
-      return "이메일 로그인 기능을 현재 사용할 수 없습니다. 관리자에게 문의해 주세요.";
+      return "Google 로그인 기능을 현재 사용할 수 없습니다. 관리자에게 문의해 주세요.";
     }
 
     if (source.includes("fetch") || source.includes("network") || source.includes("internet")) {
@@ -27,10 +27,6 @@
     }
 
     return "로그인 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.";
-  }
-
-  function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   async function getCurrentUser() {
@@ -48,19 +44,12 @@
     return { email: data.user.email || null };
   }
 
-  async function sendMagicLink(email) {
-    const normalizedEmail = String(email || "").trim();
-
-    if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
-      throw new Error("올바른 이메일 주소를 입력해 주세요.");
-    }
-
+  async function signInWithGoogle() {
     const client = getSupabaseClient();
-    const { error } = await client.auth.signInWithOtp({
-      email: normalizedEmail,
+    const { error } = await client.auth.signInWithOAuth({
+      provider: "google",
       options: {
-        shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}/account/`
+        redirectTo: `${window.location.origin}/account/`
       }
     });
 
@@ -97,7 +86,7 @@
 
   window.kwonClassAuth = Object.freeze({
     getCurrentUser,
-    sendMagicLink,
+    signInWithGoogle,
     signOut,
     onAuthStateChange
   });

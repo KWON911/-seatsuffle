@@ -218,15 +218,10 @@
 
       <div id="signedOutPanel" hidden>
         <h2 id="accountTitle">로그인이 필요합니다</h2>
-        <p class="hint">비밀번호 없이 이메일로 받은 로그인 링크를 열어 로그인할 수 있습니다.</p>
-        <form id="magicLinkForm" novalidate>
-          <label for="email">이메일</label>
-          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" aria-describedby="emailHint emailError" aria-invalid="false" required>
-          <p class="hint" id="emailHint">로그인 링크를 받은 뒤 같은 기기와 브라우저에서 메일의 링크를 열어 주세요.</p>
-          <button id="sendLinkButton" type="submit">로그인 링크 받기</button>
-        </form>
+        <p class="hint">Google 계정으로 로그인하면 여러 기기에서 같은 학급 명단을 사용할 수 있습니다.</p>
+        <button id="googleSignInButton" type="button">Google로 로그인</button>
         <p class="message" id="authMessage" role="status" aria-live="polite" aria-atomic="true"></p>
-        <p class="message error" id="emailError" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
+        <p class="message error" id="authError" role="alert" aria-live="assertive" aria-atomic="true" hidden></p>
         <p class="hint privacy-note">이 페이지는 학급 명단을 별도로 브라우저에 저장하지 않습니다.</p>
       </div>
 
@@ -357,11 +352,9 @@
       const checkingPanel = document.querySelector("#checkingPanel");
       const signedOutPanel = document.querySelector("#signedOutPanel");
       const signedInPanel = document.querySelector("#signedInPanel");
-      const magicLinkForm = document.querySelector("#magicLinkForm");
-      const emailInput = document.querySelector("#email");
-      const sendLinkButton = document.querySelector("#sendLinkButton");
+      const googleSignInButton = document.querySelector("#googleSignInButton");
       const authMessage = document.querySelector("#authMessage");
-      const emailError = document.querySelector("#emailError");
+      const authError = document.querySelector("#authError");
       const userEmail = document.querySelector("#userEmail");
       const signOutButton = document.querySelector("#signOutButton");
       const signedInMessage = document.querySelector("#signedInMessage");
@@ -402,7 +395,7 @@
       const studentListMessage = document.querySelector("#studentListMessage");
       const studentListError = document.querySelector("#studentListError");
       const studentList = document.querySelector("#studentList");
-      const defaultButtonText = "로그인 링크 받기";
+      const defaultGoogleSignInButtonText = "Google로 로그인";
       const defaultCreateRosterText = "학급 만들기";
       const defaultSaveStudentsText = "학생 명단 저장";
       const studentGenderCodes = new Set(["male", "female", "unspecified"]);
@@ -410,9 +403,7 @@
       const csvGenderCodes = Object.freeze({ "남": "male", "여": "female", "미지정": "unspecified" });
       const maxCsvFileBytes = 256 * 1024;
       const rosterActionRosterIds = new WeakMap();
-      let cooldownSeconds = 0;
-      let cooldownTimer = null;
-      let isSending = false;
+      let isGoogleSignInStarting = false;
       let isCreatingRoster = false;
       let currentSignedInEmail = null;
       let rosterRequestVersion = 0;
@@ -435,9 +426,8 @@
 
       function clearSignedOutMessages() {
         authMessage.textContent = "";
-        emailError.textContent = "";
-        emailError.hidden = true;
-        emailInput.setAttribute("aria-invalid", "false");
+        authError.textContent = "";
+        authError.hidden = true;
       }
 
       function showSignedOut() {
@@ -474,43 +464,15 @@
 
       function showSignedOutError(message) {
         showSignedOut();
-        emailError.textContent = message;
-        emailError.hidden = false;
+        authError.textContent = message;
+        authError.hidden = false;
       }
 
-      function updateSendButton() {
-        if (isSending) {
-          sendLinkButton.disabled = true;
-          sendLinkButton.textContent = "로그인 링크 보내는 중";
-          return;
-        }
-
-        if (cooldownSeconds > 0) {
-          sendLinkButton.disabled = true;
-          sendLinkButton.textContent = `다시 요청 (${cooldownSeconds}초)`;
-          return;
-        }
-
-        sendLinkButton.disabled = false;
-        sendLinkButton.textContent = defaultButtonText;
-      }
-
-      function startCooldown() {
-        if (cooldownTimer) {
-          window.clearInterval(cooldownTimer);
-        }
-
-        cooldownSeconds = 60;
-        updateSendButton();
-        cooldownTimer = window.setInterval(() => {
-          cooldownSeconds -= 1;
-          updateSendButton();
-
-          if (cooldownSeconds <= 0) {
-            window.clearInterval(cooldownTimer);
-            cooldownTimer = null;
-          }
-        }, 1000);
+      function updateGoogleSignInButton() {
+        googleSignInButton.disabled = isGoogleSignInStarting;
+        googleSignInButton.textContent = isGoogleSignInStarting
+          ? "Google 로그인으로 이동 중..."
+          : defaultGoogleSignInButtonText;
       }
 
       function clearRosterFormMessages() {
@@ -1644,25 +1606,21 @@
         }
       }
 
-      magicLinkForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
+      googleSignInButton.addEventListener("click", async () => {
+        if (isGoogleSignInStarting) return;
         clearSignedOutMessages();
-        isSending = true;
-        updateSendButton();
-        authMessage.textContent = "로그인 링크를 보내고 있습니다.";
+        isGoogleSignInStarting = true;
+        updateGoogleSignInButton();
+        authMessage.textContent = "Google 로그인 페이지로 이동하고 있습니다.";
 
         try {
-          await window.kwonClassAuth.sendMagicLink(emailInput.value);
-          authMessage.textContent = "입력한 이메일로 로그인 링크를 보냈습니다. 같은 기기와 브라우저에서 메일의 링크를 열어 주세요.";
-          startCooldown();
+          await window.kwonClassAuth.signInWithGoogle();
         } catch (error) {
-          emailInput.setAttribute("aria-invalid", "true");
-          emailError.textContent = error.message;
-          emailError.hidden = false;
-          emailInput.focus();
-        } finally {
-          isSending = false;
-          updateSendButton();
+          authMessage.textContent = "";
+          authError.textContent = error.message;
+          authError.hidden = false;
+          isGoogleSignInStarting = false;
+          updateGoogleSignInButton();
         }
       });
 
@@ -1723,7 +1681,7 @@
         if (result.success) {
           showSignedOut();
           authMessage.textContent = "로그아웃했습니다.";
-          emailInput.focus();
+          googleSignInButton.focus();
           return;
         }
 
