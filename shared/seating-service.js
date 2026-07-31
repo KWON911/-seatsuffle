@@ -99,6 +99,26 @@
     if (error) fail(safeError(error, "저장된 자리표를 불러오지 못했습니다."));
     return data || [];
   }
+  async function listPastNeighborPairs(rosterId, month = "") {
+    const plans = await listPlans(rosterId, month);
+    const planIds = plans.map((plan) => plan.id);
+    if (!planIds.length) return [];
+    const { client, userId } = await currentUser();
+    const { data, error } = await client.from("seating_assignments").select("plan_id, student_id, row_index, column_index").eq("user_id", userId).in("plan_id", planIds);
+    if (error) fail(safeError(error, "지난 자리표의 짝 정보를 불러오지 못했습니다."));
+    const byPlan = new Map();
+    (data || []).forEach((assignment) => {
+      const rows = byPlan.get(assignment.plan_id) || [];
+      rows.push(assignment); byPlan.set(assignment.plan_id, rows);
+    });
+    const pairs = new Set();
+    byPlan.forEach((assignments) => assignments.forEach((student) => assignments.forEach((other) => {
+      if (student.student_id !== other.student_id && student.row_index === other.row_index && Math.abs(student.column_index - other.column_index) === 1) {
+        pairs.add([student.student_id, other.student_id].sort().join("::"));
+      }
+    })));
+    return [...pairs];
+  }
   async function getPlan(planId) {
     const { client, userId } = await currentUser(); const id = uuid(planId, "자리표 ID");
     const { data: plan, error } = await client.from("seating_plans").select(PLAN_COLUMNS).eq("id", id).eq("user_id", userId).maybeSingle();
@@ -116,5 +136,5 @@
     if (error) fail(safeError(error, "자리표를 삭제하지 못했습니다."));
     return true;
   }
-  window.kwonClassSeatingService = Object.freeze({ savePlan, listPlans, getPlan, deletePlan });
+  window.kwonClassSeatingService = Object.freeze({ savePlan, listPlans, listPastNeighborPairs, getPlan, deletePlan });
 })();
