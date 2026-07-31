@@ -90,7 +90,11 @@
   async function listPlans(rosterId, month = "") {
     const { client, userId } = await currentUser(); const id = await ownedRoster(client, userId, rosterId);
     let query = client.from("seating_plans").select(PLAN_COLUMNS).eq("roster_id", id).eq("user_id", userId);
-    if (/^\d{4}-\d{2}$/.test(month)) query = query.gte("plan_date", `${month}-01`).lt("plan_date", `${month}-32`);
+    if (/^\d{4}-\d{2}$/.test(month)) {
+      const [year, monthIndex] = month.split("-").map(Number);
+      const nextMonth = new Date(Date.UTC(year, monthIndex, 1)).toISOString().slice(0, 10);
+      query = query.gte("plan_date", `${month}-01`).lt("plan_date", nextMonth);
+    }
     const { data, error } = await query.order("plan_date", { ascending: false }).order("created_at", { ascending: false });
     if (error) fail(safeError(error, "저장된 자리표를 불러오지 못했습니다."));
     return data || [];
