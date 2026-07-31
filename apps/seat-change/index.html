@@ -123,7 +123,7 @@
     function updateViewText() { const back=el.view.value === "back"; el.description.textContent = back ? "현재: 뒤에서 볼 때 — 교실 뒤쪽에서 교탁을 바라보는 모습입니다." : "현재: 교사 시점 — 교탁에서 학생을 바라보는 모습입니다."; }
     function displaySeat(seat) { if(el.view.value !== "back") return seat; return { ...seat, row:layout.rows+1-seat.row, column:layout.columns+1-seat.column }; }
     function render() {
-      updateViewText(); el.room.classList.toggle("desk-south", el.direction.value === "south"); el.grid.style.gridTemplateColumns=`repeat(${layout.columns}, minmax(58px, 1fr))`; el.grid.replaceChildren();
+      updateViewText(); const deskSouth=(el.direction.value === "south") !== (el.view.value === "back"); el.room.classList.toggle("desk-south", deskSouth); el.grid.style.gridTemplateColumns=`repeat(${layout.columns}, minmax(58px, 1fr))`; el.grid.replaceChildren();
       [...layout.seats].sort((a,b)=>{const x=displaySeat(a),y=displaySeat(b);return x.row-y.row||x.column-y.column;}).forEach((seat)=>{
         const studentId=[...assignments.entries()].find(([,seatId])=>seatId===seat.id)?.[0]; const student=students.find((item)=>item.id===studentId); const button=document.createElement("button"); const shown=displaySeat(seat);
         const genderSeat=layout.genderSeats?.[seat.id]||""; const studentGender=student?.genderCode||"";
